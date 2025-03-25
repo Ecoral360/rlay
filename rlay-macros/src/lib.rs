@@ -1,4 +1,5 @@
 use proc_macro::TokenStream;
+use quote::quote;
 
 #[proc_macro]
 pub fn t(item: TokenStream) -> TokenStream {
@@ -7,5 +8,5 @@ pub fn t(item: TokenStream) -> TokenStream {
 
 #[proc_macro]
 pub fn rlay(item: TokenStream) -> TokenStream {
-    todo!()
+    quote! { rlay_core::RlayElement }.into()
 }

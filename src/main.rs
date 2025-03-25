@@ -1,5 +1,10 @@
-use rlay_macros::t;
+use rlay_core::{get_root, rlay, Colors, Sizing};
 
 fn main() {
-    t!()
+    rlay! {
+        @{sizing = [Sizing::Fixed(960), Sizing::Fixed(540)], background_color = Colors::Blue}
+        {
+            rlay!(@{background_color = Colors::Pink, sizing = [Sizing::Fixed(300), Sizing::Fixed(300)]})
+        }
+    };
 }

@@ -1,5 +1,5 @@
 [workspace]
-members = ["rlay-macros"]
+members = ["rlay-core", "rlay-macros"]
 
 [package]
 name = "rlay"
@@ -8,4 +8,6 @@ edition = "2024"
 resolver = "3"
 
 [dependencies]
+piet = "0.7.0"
 rlay-macros = { path = "./rlay-macros" }
+rlay-core = { path = "./rlay-core" }
