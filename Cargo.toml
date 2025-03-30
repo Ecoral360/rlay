@@ -11,3 +11,5 @@ resolver = "3"
 piet = "0.7.0"
 rlay-macros = { path = "./rlay-macros" }
 rlay-core = { path = "./rlay-core" }
+macroquad = "0.4.14"
+derive_more = { version = "2.0.1", features = ["from"] }
