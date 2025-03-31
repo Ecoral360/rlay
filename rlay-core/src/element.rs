@@ -2,13 +2,13 @@ use std::sync::{Arc, Mutex, Weak};
 
 use derive_more::From;
 
-use crate::{Dimension2D, Vector2D};
+use crate::{Dimension2D, RlayElementLayout, Vector2D, err::RlayError};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub enum Sizing {
     Fixed(f32),
-    Fit,
     #[default]
+    Fit,
     Grow,
 }
 impl Sizing {
@@ -51,6 +51,14 @@ impl Padding {
             right,
             bottom,
         }
+    }
+
+    pub fn x(&self) -> i32 {
+        self.left + self.right
+    }
+
+    pub fn y(&self) -> i32 {
+        self.top + self.bottom
     }
 }
 
@@ -112,6 +120,7 @@ pub struct RlayElement {
     config: RlayElementConfig,
     parent: Option<Weak<Mutex<RlayElement>>>,
     pub(crate) children: Vec<Arc<Mutex<RlayElement>>>,
+    layout: RlayElementLayout,
 }
 
 impl RlayElement {
@@ -120,7 +129,16 @@ impl RlayElement {
             config,
             parent: None,
             children: vec![],
+            layout: RlayElementLayout::new_from_config(&config),
         }
+    }
+
+    pub fn dimensions(&self) -> Dimension2D {
+        self.layout.dimensions
+    }
+
+    pub fn position(&self) -> Vector2D {
+        self.layout.position
     }
 
     pub fn config(&self) -> RlayElementConfig {
@@ -137,5 +155,90 @@ impl RlayElement {
 
     pub fn add_child(&mut self, child: Arc<Mutex<RlayElement>>) {
         self.children.push(Arc::clone(&child));
+    }
+
+    pub(crate) fn close(&mut self) {
+        if let Some(ref parent) = self.parent {
+            let parent = parent.upgrade().expect("Parent still alive");
+            let mut parent = parent.lock().expect("Not corrupted");
+
+            let child_gaps = (parent.children.len() - 1) as i32 * parent.config.child_gap;
+
+            match parent.config.layout_direction {
+                LayoutDirection::LeftToRight => {
+                    // self.layout.dimensions.width += child_gaps as f32;
+                    parent.layout.dimensions.width += parent.config.child_gap as f32;
+
+                    parent.layout.dimensions.width += self.layout.dimensions.width;
+                    parent.layout.dimensions.height = self
+                        .layout
+                        .dimensions
+                        .height
+                        .max(parent.layout.dimensions.height);
+                }
+                LayoutDirection::TopToBottom => {
+                    // self.layout.dimensions.height += child_gaps as f32;
+                    parent.layout.dimensions.height += parent.config.child_gap as f32;
+
+                    parent.layout.dimensions.height += self.layout.dimensions.height;
+                    parent.layout.dimensions.width = self
+                        .layout
+                        .dimensions
+                        .width
+                        .max(parent.layout.dimensions.width);
+                }
+            }
+        }
+    }
+}
+
+impl RlayElement {
+    pub fn calculate_layout(&mut self) -> Result<(), RlayError> {
+        let config = self.config;
+
+        let parent_position = self.position();
+
+        struct StepCtx {
+            offset: f32,
+        }
+
+        let offset = config.padding_in_direction() as f32;
+
+        let mut step_ctx = StepCtx { offset };
+
+        let children = self
+            .children
+            .iter()
+            .rev()
+            .scan(&mut step_ctx, |ctx, child| {
+                let offset = config.layout_direction.value_on_axis(
+                    Vector2D::new(ctx.offset, config.padding.top as f32),
+                    Vector2D::new(config.padding.left as f32, ctx.offset),
+                );
+
+                {
+                    let mut child = child.lock().expect("Working");
+                    child.layout.position = child.layout.position + parent_position + offset;
+                }
+
+                let layout = child.lock().unwrap().calculate_layout();
+                let Ok(layout) = layout else {
+                    return Some(layout);
+                };
+
+                {
+                    let child = child.lock().expect("Working");
+                    ctx.offset += config
+                        .layout_direction
+                        .value_on_axis(child.dimensions().width, child.dimensions().height)
+                        + config.child_gap as f32;
+                }
+
+                Some(Ok(()))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        self.layout.position = parent_position;
+        Ok(())
     }
 }

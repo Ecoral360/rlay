@@ -18,11 +18,14 @@ macro_rules! rlay {
     ({$($val:ident = $exp:expr),* $(,)?}) => {{
         #[allow(clippy::needless_update)]
         {
-            $crate::get_ctx().lock().unwrap().add_element(
+            $crate::get_ctx().lock().unwrap().open_element(
                 $crate::RlayElement::new($crate::RlayElementConfig {
                     $($val : $exp.into()),*, ..Default::default()
                 })
             );
+        }
+        {
+            $crate::get_ctx().lock().unwrap().close_element();
         }
     }};
     ({$($val:ident = $exp:expr),* $(,)?} $child:block) => {{
@@ -42,4 +45,3 @@ macro_rules! rlay {
         }
         }};
 }
-

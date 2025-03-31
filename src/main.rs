@@ -8,10 +8,11 @@ use rlay_core::{
 };
 
 fn create_element() -> Result<RlayElement, RlayError> {
-    rlay!({ sizing = [Sizing::Fit, Sizing::Fit], //[Sizing::fixed(480), Sizing::fixed(270)],
-            background_color = BLUE,
+    rlay!({ background_color = BLUE,
             padding = [32, 32, 32, 32],
             child_gap = 32,
+            //sizing = [Sizing::fixed(200), Sizing::fixed(200)]
+            //layout_direction = LayoutDirection::TopToBottom,
           }
         {
             rlay!({
@@ -26,6 +27,7 @@ fn create_element() -> Result<RlayElement, RlayError> {
         }
     );
 
+    // get_root().ok_or(RlayError::NoRoot)
     take_root()
 }
 
@@ -36,6 +38,9 @@ async fn main() -> Result<(), RlayError> {
     loop {
         let root = create_element()?;
         let layout = calculate_layout(root)?;
+        //
+
+        // root.lock().unwrap().calculate_layout()?;
 
         renderer.draw_root(&layout);
 

@@ -93,16 +93,45 @@ impl RlayElementFinalLayout {
 }
 
 #[derive(Debug)]
-pub struct RlayElementLayout<Step> {
+pub struct RlayElementLayout {
+    pub position: Vector2D,
+    pub dimensions: Dimension2D,
+}
+
+impl RlayElementLayout {
+    pub fn new_from_config(config: &RlayElementConfig) -> Self {
+        let SizingDimensions { width, height } = config.sizing;
+
+        let width = match width {
+            Sizing::Fixed(w) => w,
+            Sizing::Fit => 0.0,
+            Sizing::Grow => todo!(),
+        } + config.padding.x() as f32;
+
+        let height = match height {
+            Sizing::Fixed(h) => h,
+            Sizing::Fit => 0.0,
+            Sizing::Grow => todo!(),
+        } + config.padding.y() as f32;
+
+        Self {
+            position: Vector2D::default(),
+            dimensions: Dimension2D::new(width, height),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct RlayElementLayoutOld<Step> {
     step: Step,
     position: Option<Vector2D>,
     dimensions: Dimension2D,
     config: RlayElementConfig,
-    children: Vec<RlayElementLayout<Step>>,
+    children: Vec<RlayElementLayoutOld<Step>>,
 }
 
 // The start of the chain
-impl TryFrom<RlayElement> for RlayElementLayout<FitSizingWidth> {
+impl TryFrom<RlayElement> for RlayElementLayoutOld<FitSizingWidth> {
     type Error = RlayError;
 
     fn try_from(mut value: RlayElement) -> Result<Self, Self::Error> {
@@ -125,7 +154,7 @@ impl TryFrom<RlayElement> for RlayElementLayout<FitSizingWidth> {
             Sizing::Grow => todo!(),
         };
 
-        Ok(RlayElementLayout {
+        Ok(RlayElementLayoutOld {
             step: FitSizingWidth,
             position: None,
             dimensions: Dimension2D::new(width, height),
@@ -149,13 +178,11 @@ trait ApplyStep {
     fn apply_layout_step(self) -> Result<Self::Output, RlayError>;
 }
 
-impl ApplyStep for RlayElementLayout<FitSizingWidth> {
-    type Output = RlayElementFinalLayout;
+impl ApplyStep for RlayElementLayoutOld<FitSizingWidth> {
+    type Output = RlayElementLayoutOld<GrowShrinkWidth>;
 
     fn apply_layout_step(self) -> Result<Self::Output, RlayError> {
         let config = self.config;
-
-        let parent_position = self.position.unwrap_or_default();
 
         struct StepCtx {
             offset: f32,
@@ -175,6 +202,94 @@ impl ApplyStep for RlayElementLayout<FitSizingWidth> {
                     Vector2D::new(config.padding.left as f32, ctx.offset),
                 );
 
+                // child.position =
+                //     Some(child.position.unwrap_or_default() + parent_position + offset);
+
+                let layout = child.apply_layout_step();
+                let Ok(layout) = layout else {
+                    return Some(layout);
+                };
+
+                ctx.offset += config
+                    .layout_direction
+                    .value_on_axis(layout.dimensions.width, layout.dimensions.height)
+                    + config.child_gap as f32;
+
+                Some(Ok(layout))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let width = match config.sizing.width {
+            Sizing::Fixed(w) => w,
+            Sizing::Fit => {
+                config.padding.left as f32
+                    + config.layout_direction.value_on_axis(
+                        step_ctx.offset - config.child_gap as f32,
+                        children
+                            .iter()
+                            .map(|child| child.dimensions.width)
+                            .reduce(f32::max)
+                            .unwrap_or_default(),
+                    )
+                    + config.padding.right as f32
+            }
+            Sizing::Grow => 0.0,
+        };
+
+        let height = match config.sizing.height {
+            Sizing::Fixed(h) => h,
+            Sizing::Fit => {
+                config.padding.top as f32
+                    + config.layout_direction.value_on_axis(
+                        children
+                            .iter()
+                            .map(|child| child.dimensions.height)
+                            .reduce(f32::max)
+                            .unwrap_or_default(),
+                        step_ctx.offset - config.child_gap as f32,
+                    )
+                    + config.padding.bottom as f32
+            }
+            Sizing::Grow => 0.0,
+        };
+
+        let parent_dimension = self.dimensions + Dimension2D::new(width, height);
+
+        Ok(RlayElementLayoutOld {
+            step: GrowShrinkWidth,
+            position: self.position,
+            dimensions: parent_dimension,
+            config,
+            children,
+        })
+    }
+}
+
+impl ApplyStep for RlayElementLayoutOld<GrowShrinkWidth> {
+    type Output = RlayElementFinalLayout;
+
+    fn apply_layout_step(self) -> Result<Self::Output, RlayError> {
+        let config = self.config;
+
+        struct StepCtx {
+            offset: f32,
+        }
+
+        let offset = config.padding_in_direction() as f32;
+
+        let mut step_ctx = StepCtx { offset };
+
+        let parent_position = self.position.unwrap_or_default();
+
+        let children = self
+            .children
+            .into_iter()
+            .rev()
+            .scan(&mut step_ctx, |ctx, mut child| {
+                let offset = config.layout_direction.value_on_axis(
+                    Vector2D::new(ctx.offset, config.padding.top as f32),
+                    Vector2D::new(config.padding.left as f32, ctx.offset),
+                );
                 child.position =
                     Some(child.position.unwrap_or_default() + parent_position + offset);
 
@@ -192,6 +307,8 @@ impl ApplyStep for RlayElementLayout<FitSizingWidth> {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
+        let parent_position = self.position.unwrap_or_default();
+
         let width = match config.sizing.width {
             Sizing::Fixed(w) => w,
             Sizing::Fit => {
@@ -206,7 +323,7 @@ impl ApplyStep for RlayElementLayout<FitSizingWidth> {
                     )
                     + config.padding.right as f32
             }
-            Sizing::Grow => todo!(),
+            Sizing::Grow => 0.0,
         };
 
         let height = match config.sizing.height {
@@ -223,7 +340,7 @@ impl ApplyStep for RlayElementLayout<FitSizingWidth> {
                     )
                     + config.padding.bottom as f32
             }
-            Sizing::Grow => todo!(),
+            Sizing::Grow => 0.0,
         };
 
         let parent_dimension = self.dimensions + Dimension2D::new(width, height);
@@ -231,16 +348,16 @@ impl ApplyStep for RlayElementLayout<FitSizingWidth> {
         Ok(RlayElementFinalLayout {
             position: parent_position,
             dimension: parent_dimension,
-            config,
+            config: self.config,
             children,
         })
     }
 }
 
 pub fn calculate_layout(root: RlayElement) -> Result<RlayElementFinalLayout, RlayError> {
-    let start: RlayElementLayout<FitSizingWidth> = root.try_into()?;
+    let start: RlayElementLayoutOld<FitSizingWidth> = root.try_into()?;
 
-    start.apply_layout_step()
+    start.apply_layout_step()?.apply_layout_step()
 }
 
 // impl ApplyStep for RlayElementLayout<FitSizingWidth> {
