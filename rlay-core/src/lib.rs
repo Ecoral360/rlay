@@ -47,7 +47,7 @@ macro_rules! rlay {
 }
 
 #[macro_export]
-macro_rules! sizing_axis {
+macro_rules! _sizing_axis {
     () => {Default::default()};
 
     (Fit $({$($minMax:ident : $val:expr),*})?) => {
@@ -56,15 +56,18 @@ macro_rules! sizing_axis {
             ..Default::default()
         })
     };
+
     (Grow $({$($minMax:ident : $val:expr),*})?) => {
         $crate::SizingAxis::Grow($crate::MinMax{
             $($($minMax: Some($val as f32),)*)?
             ..Default::default()
         })
     };
+
     (Fixed ($val:expr)) => {
         $crate::SizingAxis::Fixed($val as f32)
     };
+
     (Percent ($val:expr)) => {
         {
             let val = $val as f32;
@@ -82,29 +85,29 @@ macro_rules! sizing {
 
     (width : $type:ident ($val:expr) $(, $(height : $($h:tt)+)?)?) => {
         $crate::Sizing {
-            width: $crate::sizing_axis!($type ($val)),
-            height: $crate::sizing_axis!($($($($h)+)?)?)
+            width: $crate::_sizing_axis!($type ($val)),
+            height: $crate::_sizing_axis!($($($($h)+)?)?)
         }
     };
 
     (width : $type:ident $({$($minMax:ident : $val:expr),* $(,)?})? $(, $(height : $($h:tt)+)?)?) => {
         $crate::Sizing {
-            width: $crate::sizing_axis!($type $({$($minMax : $val),*})?),
-            height: $crate::sizing_axis!($($($($h)+)?)?)
+            width: $crate::_sizing_axis!($type $({$($minMax : $val),*})?),
+            height: $crate::_sizing_axis!($($($($h)+)?)?)
         }
     };
 
     (height : $type:ident $({$($minMax:ident : $val:expr),* $(,)?})? $(, $(width : $($w:tt)+)?)?) => {
         $crate::Sizing {
-            height: $crate::sizing_axis!($type $({$($minMax : $val),*})?),
-            width: $crate::sizing_axis!($($($($w)+)?)?)
+            height: $crate::_sizing_axis!($type $({$($minMax : $val),*})?),
+            width: $crate::_sizing_axis!($($($($w)+)?)?)
         }
     };
 
     (height : $type:ident ($val:expr) $(, $(width : $($w:tt)+)?)?) => {
         $crate::Sizing {
-            height: $crate::sizing_axis!($type ($val)),
-            width: $crate::sizing_axis!($($($($w)+)?)?)
+            height: $crate::_sizing_axis!($type ($val)),
+            width: $crate::_sizing_axis!($($($($w)+)?)?)
         }
     };
 }
