@@ -3,26 +3,27 @@ use macroquad::{
     window::next_frame,
 };
 use rlay_core::{
-    Color, RlayElement, RlayRenderer, Sizing, calculate_layout, err::RlayError,
-    macroquad_renderer::MacroquadRenderer, rlay, take_root,
+    Color, LayoutDirection, RlayElement, RlayRenderer, SizingAxis, calculate_layout,
+    err::RlayError, macroquad_renderer::MacroquadRenderer, rlay, sizing, take_root,
 };
 
 fn create_element() -> Result<RlayElement, RlayError> {
-    rlay!({ background_color = BLUE,
-            padding = [32, 32, 32, 32],
-            child_gap = 32,
-            //sizing = [Sizing::fixed(200), Sizing::fixed(200)]
-            //layout_direction = LayoutDirection::TopToBottom,
+    rlay!({ background_color: BLUE,
+            padding: [32, 32, 32, 32],
+            child_gap: 32,
+            //sizing : [Sizing::fixed(200), Sizing::fixed(200)]
+            layout_direction: LayoutDirection::TopToBottom,
+            sizing: sizing!{ width: Fit }
           }
         {
             rlay!({
-                background_color = Color::Pink,
-                sizing = [Sizing::fixed(150), Sizing::fixed(150)]
+                background_color: Color::Pink,
+                sizing: [SizingAxis::fixed(150), SizingAxis::fixed(150)]
             });
 
             rlay!({
-                background_color = YELLOW,
-                sizing = [Sizing::fixed(175), Sizing::fixed(100)]
+                background_color: YELLOW,
+                sizing: [SizingAxis::fixed(175), SizingAxis::fixed(100)]
             });
         }
     );

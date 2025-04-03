@@ -5,9 +5,7 @@ use macroquad::{
 };
 
 use crate::{
-    Color as RlayColor,
-    layout::{Dimension2D, RlayElementFinalLayout, Vector2D},
-    renderer::RlayRenderer,
+    layout::{Dimension2D, Vector2D}, renderer::RlayRenderer, Color as RlayColor, Done, RlayElementLayout
 };
 
 impl From<RlayColor> for Color {
@@ -31,13 +29,13 @@ impl From<Color> for RlayColor {
 pub struct MacroquadRenderer;
 
 impl RlayRenderer for MacroquadRenderer {
-    fn draw_root(&self, root: &RlayElementFinalLayout) {
+    fn draw_root(&self, root: &RlayElementLayout<Done>) {
         clear_background(BLACK);
         request_new_screen_size(root.dimensions().width, root.dimensions().height);
         self.draw_element(root);
     }
 
-    fn draw_element(&self, element: &RlayElementFinalLayout) {
+    fn draw_element(&self, element: &RlayElementLayout<Done>) {
         let Vector2D { x, y } = element.position();
         let Dimension2D { width, height } = element.dimensions();
 

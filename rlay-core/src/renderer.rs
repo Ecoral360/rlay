@@ -1,7 +1,7 @@
-use crate::layout::RlayElementFinalLayout;
+use crate::{Done, RlayElementLayout};
 
 pub trait RlayRenderer {
-    fn draw_rectangle(el: RlayElementFinalLayout) {
+    fn draw_rectangle(el: RlayElementLayout<Done>) {
         todo!()
     }
 
@@ -9,6 +9,6 @@ pub trait RlayRenderer {
         todo!()
     }
 
-    fn draw_root(&self, root: &RlayElementFinalLayout);
-    fn draw_element(&self, element: &RlayElementFinalLayout);
+    fn draw_root(&self, root: &RlayElementLayout<Done>);
+    fn draw_element(&self, element: &RlayElementLayout<Done>);
 }
