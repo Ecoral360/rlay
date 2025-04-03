@@ -13,7 +13,7 @@ fn create_element() -> Result<RlayElement, RlayError> {
             child_gap: 32,
             //sizing : [Sizing::fixed(200), Sizing::fixed(200)]
             layout_direction: LayoutDirection::TopToBottom,
-            sizing: sizing!{ width: Fit }
+            sizing: sizing!{ height: Fixed(400) }
           }
         {
             rlay!({

@@ -47,18 +47,8 @@ macro_rules! rlay {
 }
 
 #[macro_export]
-macro_rules! expand_or_value {
-    ($default:expr,) => {
-        $default
-    };
-    ($default:expr,$($value:tt)+) => {
-        $($value)+
-    };
-}
-
-#[macro_export]
 macro_rules! sizing_axis {
-    () => {};
+    () => {Default::default()};
 
     (Fit $({$($minMax:ident : $val:expr),*})?) => {
         $crate::SizingAxis::Fit($crate::MinMax{
@@ -90,31 +80,31 @@ macro_rules! sizing {
         $crate::Sizing::default()
     };
 
-    (width : $type:ident ($val:expr) $(, height : $($h:tt)+)?) => {
+    (width : $type:ident ($val:expr) $(, $(height : $($h:tt)+)?)?) => {
         $crate::Sizing {
             width: $crate::sizing_axis!($type ($val)),
-            height: $crate::expand_or_value!(Default::default(), $($crate::sizing_axis!($($h)+))?)
+            height: $crate::sizing_axis!($($($($h)+)?)?)
         }
     };
 
-    (width : $type:ident $({$($minMax:ident : $val:expr),* $(,)?})? $(, height : $($h:tt)+)?) => {
+    (width : $type:ident $({$($minMax:ident : $val:expr),* $(,)?})? $(, $(height : $($h:tt)+)?)?) => {
         $crate::Sizing {
             width: $crate::sizing_axis!($type $({$($minMax : $val),*})?),
-            height: $crate::expand_or_value!(Default::default(), $($crate::sizing_axis!($($h)+))?)
+            height: $crate::sizing_axis!($($($($h)+)?)?)
         }
     };
 
-    (height : $type:ident $({$($minMax:ident : $val:expr),* $(,)?})? $(, width : $($w:tt)+)?) => {
+    (height : $type:ident $({$($minMax:ident : $val:expr),* $(,)?})? $(, $(width : $($w:tt)+)?)?) => {
         $crate::Sizing {
             height: $crate::sizing_axis!($type $({$($minMax : $val),*})?),
-            width: $crate::expand_or_value!(Default::default(), $($crate::sizing_axis!($($w)+))?)
+            width: $crate::sizing_axis!($($($($w)+)?)?)
         }
     };
 
-    (height : $type:ident ($val:expr) $(, width : $($w:tt)+)?) => {
+    (height : $type:ident ($val:expr) $(, $(width : $($w:tt)+)?)?) => {
         $crate::Sizing {
             height: $crate::sizing_axis!($type ($val)),
-            width: $crate::expand_or_value!(Default::default(), $($crate::sizing_axis!($($w)+))?)
+            width: $crate::sizing_axis!($($($($w)+)?)?)
         }
     };
 }
