@@ -27,12 +27,6 @@ impl Default for SizingAxis {
     }
 }
 
-impl SizingAxis {
-    pub fn fixed(value: i32) -> Self {
-        Self::Fixed(value as f32)
-    }
-}
-
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Sizing {
     pub width: SizingAxis,
@@ -56,12 +50,6 @@ impl Sizing {
             height,
             ..Default::default()
         }
-    }
-}
-
-impl From<[SizingAxis; 2]> for Sizing {
-    fn from(value: [SizingAxis; 2]) -> Self {
-        Self::new(value[0], value[1])
     }
 }
 

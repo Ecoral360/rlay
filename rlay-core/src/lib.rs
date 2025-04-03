@@ -83,6 +83,20 @@ macro_rules! sizing {
         $crate::Sizing::default()
     };
 
+    ($type:ident $({$($minMax:ident : $val:expr),* $(,)?})? $(, $($($h:tt)+)?)?) => {
+        $crate::Sizing {
+            width: $crate::_sizing_axis!($type $({$($minMax : $val),*})?),
+            height: $crate::_sizing_axis!($($($($h)+)?)?)
+        }
+    };
+
+    ($type:ident ($val:expr) $(, $($($h:tt)+)?)?) => {
+        $crate::Sizing {
+            width: $crate::_sizing_axis!($type ($val)),
+            height: $crate::_sizing_axis!($($($($h)+)?)?)
+        }
+    };
+
     (width : $type:ident ($val:expr) $(, $(height : $($h:tt)+)?)?) => {
         $crate::Sizing {
             width: $crate::_sizing_axis!($type ($val)),

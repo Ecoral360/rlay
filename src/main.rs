@@ -3,8 +3,8 @@ use macroquad::{
     window::next_frame,
 };
 use rlay_core::{
-    Color, LayoutDirection, RlayElement, RlayRenderer, SizingAxis, calculate_layout,
-    err::RlayError, macroquad_renderer::MacroquadRenderer, rlay, sizing, take_root,
+    Color, LayoutDirection, RlayElement, RlayRenderer, calculate_layout, err::RlayError,
+    macroquad_renderer::MacroquadRenderer, rlay, sizing, take_root,
 };
 
 fn create_element() -> Result<RlayElement, RlayError> {
@@ -13,17 +13,17 @@ fn create_element() -> Result<RlayElement, RlayError> {
             child_gap: 32,
             //sizing : [Sizing::fixed(200), Sizing::fixed(200)]
             layout_direction: LayoutDirection::TopToBottom,
-            sizing: sizing!{ height: Fixed(400) }
+            sizing: sizing!{ Fit }
           }
         {
             rlay!({
                 background_color: Color::Pink,
-                sizing: [SizingAxis::fixed(150), SizingAxis::fixed(150)]
+                sizing: sizing!(Fixed(150), Fixed(150))
             });
 
             rlay!({
                 background_color: YELLOW,
-                sizing: [SizingAxis::fixed(175), SizingAxis::fixed(100)]
+                sizing: sizing!(Fixed(175), Fixed(100))
             });
         }
     );
