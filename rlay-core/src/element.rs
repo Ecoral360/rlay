@@ -164,6 +164,10 @@ impl RlayElement {
         &self.children
     }
 
+    pub fn parent(&self) -> Option<Weak<Mutex<RlayElement>>> {
+        self.parent.as_ref().map(Weak::clone)
+    }
+
     pub fn add_parent(&mut self, parent: Weak<Mutex<RlayElement>>) {
         self.parent = Some(Weak::clone(&parent));
     }
