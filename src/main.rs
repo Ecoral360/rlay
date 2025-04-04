@@ -23,7 +23,7 @@ fn create_element() -> Result<RlayElement, RlayError> {
 
             rlay!({
                 background_color: YELLOW,
-                sizing: sizing!(Grow, Grow)//Fixed(100))
+                sizing: sizing!(Grow(100.0 .. 200.0), Grow)//Fixed(100))
             });
 
             rlay!({

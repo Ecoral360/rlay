@@ -1,5 +1,7 @@
+use core::f32;
 use std::{
     marker::PhantomData,
+    ops::RangeBounds,
     sync::{Arc, Mutex, Weak},
 };
 
@@ -13,6 +15,29 @@ pub struct MinMax {
     pub max: Option<f32>,
 }
 
+impl MinMax {
+    /// Clamps the value to be >= min and <= max
+    pub fn clamp(&self, value: f32) -> f32 {
+        value.clamp(self.min.unwrap_or(0.0), self.max.unwrap_or(f32::INFINITY))
+    }
+}
+
+impl<T: RangeBounds<f32>> From<T> for MinMax {
+    fn from(value: T) -> Self {
+        let min = match value.start_bound() {
+            std::ops::Bound::Included(v) => Some(*v),
+            std::ops::Bound::Excluded(v) => Some(*v + f32::EPSILON),
+            std::ops::Bound::Unbounded => None,
+        };
+        let max = match value.end_bound() {
+            std::ops::Bound::Included(v) => Some(*v),
+            std::ops::Bound::Excluded(v) => Some(*v - f32::EPSILON),
+            std::ops::Bound::Unbounded => None,
+        };
+        MinMax { min, max }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum SizingAxis {
     Fit(MinMax),
@@ -21,6 +46,26 @@ pub enum SizingAxis {
     /// A value between 0 and 1
     Percent(f32),
 }
+
+impl SizingAxis {
+    pub fn get_max(&self) -> f32 {
+        match self {
+            SizingAxis::Fit(MinMax { min, max }) => max.unwrap_or(f32::INFINITY),
+            SizingAxis::Fixed(val) => *val,
+            SizingAxis::Grow(MinMax { min, max }) => max.unwrap_or(f32::INFINITY),
+            SizingAxis::Percent(_) => todo!(),
+        }
+    }
+    pub fn get_min(&self) -> f32 {
+        match self {
+            SizingAxis::Fit(MinMax { min, max }) => min.unwrap_or(0.0),
+            SizingAxis::Fixed(val) => *val,
+            SizingAxis::Grow(MinMax { min, max }) => min.unwrap_or(0.0),
+            SizingAxis::Percent(_) => todo!(),
+        }
+    }
+}
+
 impl Default for SizingAxis {
     fn default() -> Self {
         Self::Fit(MinMax::default())

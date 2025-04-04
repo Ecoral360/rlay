@@ -51,17 +51,25 @@ macro_rules! _sizing_axis {
     () => {Default::default()};
 
     (Fit $({$($minMax:ident : $val:expr),*})?) => {
-        $crate::SizingAxis::Fit($crate::MinMax{
+        $crate::SizingAxis::Fit($crate::MinMax {
             $($($minMax: Some($val as f32),)*)?
             ..Default::default()
         })
     };
 
     (Grow $({$($minMax:ident : $val:expr),*})?) => {
-        $crate::SizingAxis::Grow($crate::MinMax{
-            $($($minMax: Some($val as f32),)*)?
+        $crate::SizingAxis::Grow($crate::MinMax {
+            $($($minMax: $val as f32,)*)?
             ..Default::default()
         })
+    };
+
+    (Grow ($val:expr)) => {
+        $crate::SizingAxis::Grow($val.into())
+    };
+
+    (Fit ($val:expr)) => {
+        $crate::SizingAxis::Fit($val.into())
     };
 
     (Fixed ($val:expr)) => {

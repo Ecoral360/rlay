@@ -1,12 +1,16 @@
 use core::f32;
 use std::{
     marker::PhantomData,
-    ops::{Add, Sub},
+    ops::{Add, Not, Sub},
     rc::Weak,
     sync::{Arc, Mutex},
 };
 
-use crate::{LayoutDirection, RlayElement, RlayElementConfig, Sizing, SizingAxis, err::RlayError};
+use macroquad::rand::rand;
+
+use crate::{
+    LayoutDirection, MinMax, RlayElement, RlayElementConfig, Sizing, SizingAxis, err::RlayError,
+};
 
 macro_rules! def_states {
     ($state_name:ident : $($state:ident $(($($derive:ident),*))?),* $(,)?) => {
@@ -49,6 +53,20 @@ pub struct Dimension2D {
 impl Dimension2D {
     pub fn new(width: f32, height: f32) -> Self {
         Self { width, height }
+    }
+
+    pub fn clamped_width(self, min_max: MinMax) -> Self {
+        Self {
+            width: min_max.clamp(self.width),
+            height: self.height,
+        }
+    }
+
+    pub fn clamped_height(self, min_max: MinMax) -> Self {
+        Self {
+            width: self.width,
+            height: min_max.clamp(self.height),
+        }
     }
 }
 
@@ -138,14 +156,14 @@ impl TryFrom<RlayElement> for RlayElementLayout<FitSizingWidth> {
 
         let width = match width {
             SizingAxis::Fixed(w) => w,
-            SizingAxis::Fit(..) => 0.0,
-            SizingAxis::Grow(..) => 0.0,
+            SizingAxis::Fit(MinMax { min, .. }) => min.unwrap_or(0.0),
+            SizingAxis::Grow(MinMax { min, .. }) => min.unwrap_or(0.0),
             SizingAxis::Percent(_) => todo!(),
         };
         let height = match height {
             SizingAxis::Fixed(h) => h,
-            SizingAxis::Fit(..) => 0.0,
-            SizingAxis::Grow(..) => 0.0,
+            SizingAxis::Fit(MinMax { min, .. }) => min.unwrap_or(0.0),
+            SizingAxis::Grow(MinMax { min, .. }) => min.unwrap_or(0.0),
             SizingAxis::Percent(_) => todo!(),
         };
 
@@ -209,7 +227,8 @@ impl LayoutStep for RlayElementLayout<FitSizingWidth> {
                 .unwrap_or_default(),
         ) + config.padding.x() as f32;
 
-        let parent_dimension = self.dimensions + Dimension2D::new(width, 0.0);
+        let parent_dimension =
+            (self.dimensions + Dimension2D::new(width, 0.0)).clamped_width(min_max);
 
         Ok(RlayElementLayout {
             _marker: PhantomData,
@@ -262,14 +281,83 @@ impl LayoutStep for RlayElementLayout<GrowShrinkSizingWidth> {
             }
 
             width_to_add = width_to_add.min(remaining_width / children_grow.len() as f32);
+            if width_to_add == 0.0 {
+                break;
+            }
 
-            for child in children_grow.iter_mut() {
+            let mut child_rem_idx = vec![];
+
+            for (i, child) in children_grow.iter_mut().enumerate() {
+                let max = child.config.sizing.width.get_max();
+                let min = child.config.sizing.width.get_min();
+
                 if child.dimensions.width == smallest {
-                    child.dimensions.width += width_to_add;
-                    remaining_width -= width_to_add;
+                    if child.dimensions.width + width_to_add > max {
+                        remaining_width -= max - child.dimensions.width;
+                        child.dimensions.width = max;
+                        child_rem_idx.push(i);
+                    } else {
+                        child.dimensions.width += width_to_add;
+                        remaining_width -= width_to_add;
+                    }
                 }
             }
+
+            children_grow = children_grow
+                .into_iter()
+                .enumerate()
+                .filter_map(|(i, child)| child_rem_idx.contains(&i).not().then_some(child))
+                .collect();
         }
+
+        let mut children_grow = children
+            .iter_mut()
+            .filter(|child| matches!(child.config().sizing.width, SizingAxis::Grow(..)))
+            .collect::<Vec<_>>();
+
+        // while remaining_width < 0.0 && !children_grow.is_empty() {
+        //     let mut largest = children_grow[0].dimensions.width;
+        //     let mut second_largest = 0.0;
+        //     let mut width_to_rem = remaining_width;
+        //
+        //     for child in children_grow.iter() {
+        //         if child.dimensions.width > largest {
+        //             second_largest = largest;
+        //             largest = child.dimensions.width;
+        //         } else if child.dimensions.width < largest {
+        //             second_largest = second_largest.max(child.dimensions.width);
+        //             width_to_rem = second_largest - largest;
+        //         }
+        //     }
+        //
+        //     width_to_rem = width_to_rem.max(remaining_width / children_grow.len() as f32);
+        //     if width_to_rem == 0.0 {
+        //         break;
+        //     }
+        //
+        //     let mut child_rem_idx = vec![];
+        //
+        //     for (i, child) in children_grow.iter_mut().enumerate() {
+        //         let min = child.config.sizing.width.get_min();
+        //
+        //         if child.dimensions.width == largest {
+        //             if child.dimensions.width - width_to_rem < min {
+        //                 remaining_width += child.dimensions.width - min;
+        //                 child.dimensions.width = min;
+        //                 child_rem_idx.push(i);
+        //             } else {
+        //                 child.dimensions.width -= width_to_rem;
+        //                 remaining_width += width_to_rem;
+        //             }
+        //         }
+        //     }
+        //
+        //     children_grow = children_grow
+        //         .into_iter()
+        //         .enumerate()
+        //         .filter_map(|(i, child)| child_rem_idx.contains(&i).not().then_some(child))
+        //         .collect();
+        // }
 
         let children = children
             .into_iter()
@@ -322,7 +410,8 @@ impl LayoutStep for RlayElementLayout<FitSizingHeight> {
                 + ((children.len().max(1) - 1) as i32 * config.child_gap) as f32,
         ) + config.padding.y() as f32;
 
-        let parent_dimension = self.dimensions + Dimension2D::new(0.0, height);
+        let parent_dimension =
+            (self.dimensions + Dimension2D::new(0.0, height)).clamped_height(min_max);
 
         Ok(RlayElementLayout {
             _marker: PhantomData,
