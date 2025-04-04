@@ -1,5 +1,5 @@
 use macroquad::{
-    color::{BLUE, GREEN, PINK, YELLOW},
+    color::{BLUE, GREEN, ORANGE, PINK, YELLOW},
     window::next_frame,
 };
 use rlay_core::{
@@ -13,7 +13,7 @@ fn create_element() -> Result<RlayElement, RlayError> {
             child_gap: 32,
             //sizing : [Sizing::fixed(200), Sizing::fixed(200)]
             //layout_direction: LayoutDirection::TopToBottom,
-            sizing: sizing!{ Grow }
+            sizing: sizing!{ Grow, Grow }
           }
         {
             rlay!({
@@ -23,7 +23,12 @@ fn create_element() -> Result<RlayElement, RlayError> {
 
             rlay!({
                 background_color: YELLOW,
-                sizing: sizing!(Grow, Fixed(100))
+                sizing: sizing!(Grow, Grow)//Fixed(100))
+            });
+
+            rlay!({
+                background_color: ORANGE,
+                sizing: sizing!(Grow, Grow)//Fixed(100))
             });
 
             rlay!({

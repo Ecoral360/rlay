@@ -1,3 +1,4 @@
+use core::f32;
 use std::{
     marker::PhantomData,
     ops::{Add, Sub},
@@ -185,20 +186,6 @@ impl LayoutStep for RlayElementLayout<FitSizingWidth> {
             .map(|child| child.apply_layout_step())
             .collect::<Result<Vec<_>, _>>()?;
 
-        let children_width = config.layout_direction.value_on_axis(
-            children
-                .iter()
-                .map(|child| child.dimensions.width)
-                .sum::<f32>(),
-            children
-                .iter()
-                .map(|child| child.dimensions.width)
-                .reduce(f32::max)
-                .unwrap_or_default(),
-        );
-
-        let gap_width = ((children.len().max(1) - 1) as i32 * config.child_gap) as f32;
-
         let SizingAxis::Fit(min_max) = config.sizing.width else {
             return Ok(RlayElementLayout {
                 _marker: PhantomData,
@@ -209,10 +196,18 @@ impl LayoutStep for RlayElementLayout<FitSizingWidth> {
             });
         };
 
-        let width = config
-            .layout_direction
-            .value_on_axis(children_width + gap_width, children_width)
-            + config.padding.x() as f32;
+        let width = config.layout_direction.value_on_axis(
+            children
+                .iter()
+                .map(|child| child.dimensions.width)
+                .sum::<f32>()
+                + ((children.len().max(1) - 1) as i32 * config.child_gap) as f32,
+            children
+                .iter()
+                .map(|child| child.dimensions.width)
+                .reduce(f32::max)
+                .unwrap_or_default(),
+        ) + config.padding.x() as f32;
 
         let parent_dimension = self.dimensions + Dimension2D::new(width, 0.0);
 
@@ -232,33 +227,53 @@ impl LayoutStep for RlayElementLayout<GrowShrinkSizingWidth> {
     fn apply_layout_step(self) -> Result<RlayElementLayout<Self::NextStep>, RlayError> {
         let config = self.config;
 
-        let children = self.children;
+        let mut children = self.children;
 
         let children_width = config.layout_direction.value_on_axis(
             children
                 .iter()
                 .map(|child| child.dimensions.width)
-                .sum::<f32>(),
-            children
-                .iter()
-                .map(|child| child.dimensions.width)
-                .reduce(f32::max)
-                .unwrap_or_default(),
+                .sum::<f32>()
+                + ((children.len().max(1) - 1) as i32 * config.child_gap) as f32,
+            0.0,
         );
 
-        let gap_width = ((children.len().max(1) - 1) as i32 * config.child_gap) as f32;
+        let mut remaining_width =
+            self.dimensions.width - children_width - config.padding.x() as f32;
 
-        let remaining_width =
-            self.dimensions.width - children_width - gap_width - config.padding.x() as f32;
+        let mut children_grow = children
+            .iter_mut()
+            .filter(|child| matches!(child.config().sizing.width, SizingAxis::Grow(..)))
+            .collect::<Vec<_>>();
+
+        while remaining_width > 0.0 && !children_grow.is_empty() {
+            let mut smallest = children_grow[0].dimensions.width;
+            let mut second_smallest = f32::INFINITY;
+            let mut width_to_add = remaining_width;
+
+            for child in children_grow.iter() {
+                if child.dimensions.width < smallest {
+                    second_smallest = smallest;
+                    smallest = child.dimensions.width;
+                } else if child.dimensions.width > smallest {
+                    second_smallest = second_smallest.min(child.dimensions.width);
+                    width_to_add = second_smallest - smallest;
+                }
+            }
+
+            width_to_add = width_to_add.min(remaining_width / children_grow.len() as f32);
+
+            for child in children_grow.iter_mut() {
+                if child.dimensions.width == smallest {
+                    child.dimensions.width += width_to_add;
+                    remaining_width -= width_to_add;
+                }
+            }
+        }
 
         let children = children
             .into_iter()
-            .map(|mut child| {
-                if let SizingAxis::Grow(min_max) = child.config().sizing.width {
-                    child.dimensions.width = remaining_width;
-                }
-                child.apply_layout_step()
-            })
+            .map(|mut child| child.apply_layout_step())
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(RlayElementLayout {
@@ -325,10 +340,27 @@ impl LayoutStep for RlayElementLayout<GrowShrinkSizingHeight> {
     fn apply_layout_step(self) -> Result<RlayElementLayout<Self::NextStep>, RlayError> {
         let config = self.config;
 
-        let children = self
-            .children
+        let children = self.children;
+
+        let children_height = config.layout_direction.value_on_axis(
+            0.0,
+            children
+                .iter()
+                .map(|child| child.dimensions.height)
+                .sum::<f32>()
+                + ((children.len().max(1) - 1) as i32 * config.child_gap) as f32,
+        );
+
+        let remaining_height = self.dimensions.height - children_height - config.padding.y() as f32;
+
+        let children = children
             .into_iter()
-            .map(|child| child.apply_layout_step())
+            .map(|mut child| {
+                if let SizingAxis::Grow(min_max) = child.config().sizing.height {
+                    child.dimensions.height = remaining_height;
+                }
+                child.apply_layout_step()
+            })
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(RlayElementLayout {
