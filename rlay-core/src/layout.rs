@@ -9,7 +9,7 @@ use std::{
 use macroquad::rand::rand;
 
 use crate::{
-    LayoutDirection, MinMax, RlayElement, RlayElementConfig, Sizing, SizingAxis, err::RlayError,
+    Element, ElementConfig, LayoutDirection, MinMax, Sizing, SizingAxis, err::RlayError,
 };
 
 macro_rules! def_states {
@@ -97,33 +97,33 @@ def_states! {
 }
 
 #[derive(Debug)]
-pub struct RlayElementLayout<S: ElementStep> {
+pub struct ElementLayout<S: ElementStep> {
     _marker: PhantomData<S>,
     position: Vector2D,
     dimensions: Dimension2D,
-    config: RlayElementConfig,
+    layout_config: ElementConfig,
 
-    children: Vec<RlayElementLayout<S>>,
+    children: Vec<ElementLayout<S>>,
 }
 
-impl RlayElementLayout<Done> {
+impl ElementLayout<Done> {
     pub fn new(
         position: Vector2D,
         dimensions: Dimension2D,
-        config: RlayElementConfig,
-        children: Vec<RlayElementLayout<Done>>,
+        config: ElementConfig,
+        children: Vec<ElementLayout<Done>>,
     ) -> Self {
         Self {
             _marker: PhantomData,
             position,
             dimensions,
-            config,
+            layout_config: config,
             children,
         }
     }
 }
 
-impl<S: ElementStep> RlayElementLayout<S> {
+impl<S: ElementStep> ElementLayout<S> {
     pub fn position(&self) -> Vector2D {
         self.position
     }
@@ -132,20 +132,20 @@ impl<S: ElementStep> RlayElementLayout<S> {
         self.dimensions
     }
 
-    pub fn config(&self) -> &RlayElementConfig {
-        &self.config
+    pub fn layout_config(&self) -> &ElementConfig {
+        &self.layout_config
     }
 
-    pub fn children(&self) -> &Vec<RlayElementLayout<S>> {
+    pub fn children(&self) -> &Vec<ElementLayout<S>> {
         &self.children
     }
 }
 
 // The start of the chain
-impl TryFrom<RlayElement> for RlayElementLayout<FitSizingWidth> {
+impl TryFrom<Element> for ElementLayout<FitSizingWidth> {
     type Error = RlayError;
 
-    fn try_from(mut value: RlayElement) -> Result<Self, Self::Error> {
+    fn try_from(mut value: Element) -> Result<Self, Self::Error> {
         let mut children = Vec::with_capacity(value.children.len());
 
         while let Some(child) = value.children.pop() {
@@ -167,11 +167,11 @@ impl TryFrom<RlayElement> for RlayElementLayout<FitSizingWidth> {
             SizingAxis::Percent(_) => todo!(),
         };
 
-        Ok(RlayElementLayout {
+        Ok(ElementLayout {
             _marker: PhantomData,
             position: Vector2D::default(),
             dimensions: Dimension2D::new(width, height),
-            config: value.config(),
+            layout_config: value.config(),
             children: children
                 .into_iter()
                 .map(|child| {
@@ -188,14 +188,14 @@ impl TryFrom<RlayElement> for RlayElementLayout<FitSizingWidth> {
 trait LayoutStep {
     type NextStep: ElementStep;
 
-    fn apply_layout_step(self) -> Result<RlayElementLayout<Self::NextStep>, RlayError>;
+    fn apply_layout_step(self) -> Result<ElementLayout<Self::NextStep>, RlayError>;
 }
 
-impl LayoutStep for RlayElementLayout<FitSizingWidth> {
+impl LayoutStep for ElementLayout<FitSizingWidth> {
     type NextStep = GrowShrinkSizingWidth;
 
-    fn apply_layout_step(self) -> Result<RlayElementLayout<Self::NextStep>, RlayError> {
-        let config = self.config;
+    fn apply_layout_step(self) -> Result<ElementLayout<Self::NextStep>, RlayError> {
+        let config = self.layout_config;
 
         let children = self
             .children
@@ -205,11 +205,11 @@ impl LayoutStep for RlayElementLayout<FitSizingWidth> {
             .collect::<Result<Vec<_>, _>>()?;
 
         let SizingAxis::Fit(min_max) = config.sizing.width else {
-            return Ok(RlayElementLayout {
+            return Ok(ElementLayout {
                 _marker: PhantomData,
                 position: self.position,
                 dimensions: self.dimensions,
-                config,
+                layout_config: config,
                 children,
             });
         };
@@ -230,21 +230,21 @@ impl LayoutStep for RlayElementLayout<FitSizingWidth> {
         let parent_dimension =
             (self.dimensions + Dimension2D::new(width, 0.0)).clamped_width(min_max);
 
-        Ok(RlayElementLayout {
+        Ok(ElementLayout {
             _marker: PhantomData,
             position: self.position,
             dimensions: parent_dimension,
-            config,
+            layout_config: config,
             children,
         })
     }
 }
 
-impl LayoutStep for RlayElementLayout<GrowShrinkSizingWidth> {
+impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
     type NextStep = FitSizingHeight;
 
-    fn apply_layout_step(self) -> Result<RlayElementLayout<Self::NextStep>, RlayError> {
-        let config = self.config;
+    fn apply_layout_step(self) -> Result<ElementLayout<Self::NextStep>, RlayError> {
+        let config = self.layout_config;
 
         let mut children = self.children;
 
@@ -262,7 +262,7 @@ impl LayoutStep for RlayElementLayout<GrowShrinkSizingWidth> {
 
         let mut children_grow = children
             .iter_mut()
-            .filter(|child| matches!(child.config().sizing.width, SizingAxis::Grow(..)))
+            .filter(|child| matches!(child.layout_config().sizing.width, SizingAxis::Grow(..)))
             .collect::<Vec<_>>();
 
         while remaining_width > 0.0 && !children_grow.is_empty() {
@@ -288,8 +288,8 @@ impl LayoutStep for RlayElementLayout<GrowShrinkSizingWidth> {
             let mut child_rem_idx = vec![];
 
             for (i, child) in children_grow.iter_mut().enumerate() {
-                let max = child.config.sizing.width.get_max();
-                let min = child.config.sizing.width.get_min();
+                let max = child.layout_config.sizing.width.get_max();
+                let min = child.layout_config.sizing.width.get_min();
 
                 if child.dimensions.width == smallest {
                     if child.dimensions.width + width_to_add > max {
@@ -312,7 +312,7 @@ impl LayoutStep for RlayElementLayout<GrowShrinkSizingWidth> {
 
         let mut children_grow = children
             .iter_mut()
-            .filter(|child| matches!(child.config().sizing.width, SizingAxis::Grow(..)))
+            .filter(|child| matches!(child.layout_config().sizing.width, SizingAxis::Grow(..)))
             .collect::<Vec<_>>();
 
         // while remaining_width < 0.0 && !children_grow.is_empty() {
@@ -364,21 +364,21 @@ impl LayoutStep for RlayElementLayout<GrowShrinkSizingWidth> {
             .map(|mut child| child.apply_layout_step())
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(RlayElementLayout {
+        Ok(ElementLayout {
             _marker: PhantomData,
             position: self.position,
             dimensions: self.dimensions,
-            config,
+            layout_config: config,
             children,
         })
     }
 }
 
-impl LayoutStep for RlayElementLayout<FitSizingHeight> {
+impl LayoutStep for ElementLayout<FitSizingHeight> {
     type NextStep = GrowShrinkSizingHeight;
 
-    fn apply_layout_step(self) -> Result<RlayElementLayout<Self::NextStep>, RlayError> {
-        let config = self.config;
+    fn apply_layout_step(self) -> Result<ElementLayout<Self::NextStep>, RlayError> {
+        let config = self.layout_config;
 
         let children = self
             .children
@@ -388,11 +388,11 @@ impl LayoutStep for RlayElementLayout<FitSizingHeight> {
             .collect::<Result<Vec<_>, _>>()?;
 
         let SizingAxis::Fit(min_max) = config.sizing.height else {
-            return Ok(RlayElementLayout {
+            return Ok(ElementLayout {
                 _marker: PhantomData,
                 position: self.position,
                 dimensions: self.dimensions,
-                config,
+                layout_config: config,
                 children,
             });
         };
@@ -413,21 +413,21 @@ impl LayoutStep for RlayElementLayout<FitSizingHeight> {
         let parent_dimension =
             (self.dimensions + Dimension2D::new(0.0, height)).clamped_height(min_max);
 
-        Ok(RlayElementLayout {
+        Ok(ElementLayout {
             _marker: PhantomData,
             position: self.position,
             dimensions: parent_dimension,
-            config,
+            layout_config: config,
             children,
         })
     }
 }
 
-impl LayoutStep for RlayElementLayout<GrowShrinkSizingHeight> {
+impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
     type NextStep = Positions;
 
-    fn apply_layout_step(self) -> Result<RlayElementLayout<Self::NextStep>, RlayError> {
-        let config = self.config;
+    fn apply_layout_step(self) -> Result<ElementLayout<Self::NextStep>, RlayError> {
+        let config = self.layout_config;
 
         let children = self.children;
 
@@ -445,28 +445,28 @@ impl LayoutStep for RlayElementLayout<GrowShrinkSizingHeight> {
         let children = children
             .into_iter()
             .map(|mut child| {
-                if let SizingAxis::Grow(min_max) = child.config().sizing.height {
+                if let SizingAxis::Grow(min_max) = child.layout_config().sizing.height {
                     child.dimensions.height = remaining_height;
                 }
                 child.apply_layout_step()
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(RlayElementLayout {
+        Ok(ElementLayout {
             _marker: PhantomData,
             position: self.position,
             dimensions: self.dimensions,
-            config,
+            layout_config: config,
             children,
         })
     }
 }
 
-impl LayoutStep for RlayElementLayout<Positions> {
+impl LayoutStep for ElementLayout<Positions> {
     type NextStep = Done;
 
-    fn apply_layout_step(self) -> Result<RlayElementLayout<Self::NextStep>, RlayError> {
-        let config = self.config;
+    fn apply_layout_step(self) -> Result<ElementLayout<Self::NextStep>, RlayError> {
+        let config = self.layout_config;
 
         struct StepCtx {
             offset: f32,
@@ -503,18 +503,18 @@ impl LayoutStep for RlayElementLayout<Positions> {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(RlayElementLayout {
+        Ok(ElementLayout {
             _marker: PhantomData,
             position: parent_position,
             dimensions: self.dimensions,
-            config,
+            layout_config: config,
             children,
         })
     }
 }
 
-pub fn calculate_layout(root: RlayElement) -> Result<RlayElementLayout<Done>, RlayError> {
-    let start: RlayElementLayout<FitSizingWidth> = root.try_into()?;
+pub fn calculate_layout(root: Element) -> Result<ElementLayout<Done>, RlayError> {
+    let start: ElementLayout<FitSizingWidth> = root.try_into()?;
 
     start
         .apply_layout_step()?

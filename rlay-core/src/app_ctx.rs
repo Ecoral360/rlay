@@ -3,20 +3,20 @@ use std::{
     sync::{Arc, LazyLock, Mutex},
 };
 
-use crate::{RlayElement, err::RlayError};
+use crate::{Element, err::RlayError};
 
 #[derive(Debug, Default)]
 pub struct AppCtx {
-    root: Option<Arc<Mutex<RlayElement>>>,
-    elements: Vec<Arc<Mutex<RlayElement>>>,
+    root: Option<Arc<Mutex<Element>>>,
+    elements: Vec<Arc<Mutex<Element>>>,
 }
 
 impl AppCtx {
-    pub(crate) fn get_root(&self) -> Option<Arc<Mutex<RlayElement>>> {
+    pub(crate) fn get_root(&self) -> Option<Arc<Mutex<Element>>> {
         self.root.as_ref().map(Arc::clone)
     }
 
-    pub(crate) fn take_root(&mut self) -> Result<RlayElement, RlayError> {
+    pub(crate) fn take_root(&mut self) -> Result<Element, RlayError> {
         let el = self.root.take().ok_or(RlayError::NoRoot)?;
         Arc::into_inner(el)
             .ok_or(RlayError::RootBorrowed)?
@@ -24,7 +24,7 @@ impl AppCtx {
             .map_err(|_| RlayError::RootCorrupted)
     }
 
-    pub fn open_element(&mut self, el: RlayElement) {
+    pub fn open_element(&mut self, el: Element) {
         let new_el = Arc::new(Mutex::new(el));
         if self.root.is_none() {
             self.root = Some(Arc::clone(&new_el));
@@ -57,10 +57,10 @@ pub fn get_ctx() -> Arc<Mutex<AppCtx>> {
     Arc::clone(&APP_CTX)
 }
 
-pub fn get_root() -> Option<Arc<Mutex<RlayElement>>> {
+pub fn get_root() -> Option<Arc<Mutex<Element>>> {
     APP_CTX.lock().ok()?.get_root()
 }
 
-pub fn take_root() -> Result<RlayElement, RlayError> {
+pub fn take_root() -> Result<Element, RlayError> {
     APP_CTX.lock().expect("Cannot lock the AppCtx").take_root()
 }

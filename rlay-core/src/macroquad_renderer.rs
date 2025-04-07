@@ -8,35 +8,29 @@ use macroquad::{
 };
 
 use crate::{
-    Color as RlayColor, Done, Positions, RlayElement, RlayElementConfig, RlayElementLayout,
+    Color as RlayColor, Done, Element, ElementConfig, ElementLayout, Positions,
     layout::{Dimension2D, Vector2D},
-    renderer::RlayRenderer,
+    renderer::Renderer,
     sizing,
 };
 
 impl From<RlayColor> for Color {
     fn from(value: RlayColor) -> Self {
-        match value {
-            RlayColor::Blue => BLUE,
-            RlayColor::Pink => PINK,
-            RlayColor::Black => BLACK,
-            RlayColor::RGBA(r, g, b, a) => Color::new(r, g, b, a),
-            RlayColor::Yellow => YELLOW,
-        }
+        Color::new(value.r, value.g, value.b, value.a)
     }
 }
 
 impl From<Color> for RlayColor {
     fn from(value: Color) -> Self {
-        RlayColor::RGBA(value.r, value.g, value.b, value.a)
+        RlayColor::new_const(value.r, value.g, value.b, value.a)
     }
 }
 
 pub struct MacroquadRenderer;
 
-impl RlayRenderer for MacroquadRenderer {
-    fn setup_root(&self, root: RlayElement) -> RlayElement {
-        let mut screen_root = RlayElement::new(RlayElementConfig {
+impl Renderer for MacroquadRenderer {
+    fn setup_root(&self, root: Element) -> Element {
+        let mut screen_root = Element::new(ElementConfig {
             sizing: sizing!(Fixed(screen_width()), Fixed(screen_height())),
             ..Default::default()
         });
@@ -45,7 +39,7 @@ impl RlayRenderer for MacroquadRenderer {
         screen_root
     }
 
-    fn draw_root(&self, root: RlayElementLayout<Done>) {
+    fn draw_root(&self, root: ElementLayout<Done>) {
         // request_new_screen_size(root.dimensions().width, root.dimensions().height);
         let position = Vector2D::default();
 
@@ -53,11 +47,11 @@ impl RlayRenderer for MacroquadRenderer {
         self.draw_element(&root);
     }
 
-    fn draw_element(&self, element: &RlayElementLayout<Done>) {
+    fn draw_element(&self, element: &ElementLayout<Done>) {
         let Vector2D { x, y } = element.position();
         let Dimension2D { width, height } = element.dimensions();
 
-        let bg_color = element.config().background_color.into();
+        let bg_color = element.layout_config().background_color.into();
         draw_rectangle(x, y, width, height, bg_color);
 
         for child in element.children() {

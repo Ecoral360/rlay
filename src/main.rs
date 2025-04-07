@@ -1,39 +1,39 @@
-use macroquad::{
-    color::{BLUE, GREEN, ORANGE, PINK, YELLOW},
-    window::next_frame,
-};
+use macroquad::window::next_frame;
 use rlay_core::{
-    LayoutDirection, RlayElement, RlayRenderer, calculate_layout, err::RlayError,
-    macroquad_renderer::MacroquadRenderer, rlay, sizing, take_root,
+    Element, LayoutDirection, Renderer, calculate_layout,
+    colors::{BLUE, GREEN, ORANGE, PINK, YELLOW},
+    err::RlayError,
+    macroquad_renderer::MacroquadRenderer,
+    rlay, sizing, take_root,
 };
 
-fn create_element() -> Result<RlayElement, RlayError> {
-    rlay!({ background_color: BLUE,
-            padding: [32, 32, 32, 32],
-            child_gap: 32,
-            //sizing : [Sizing::fixed(200), Sizing::fixed(200)]
-            //layout_direction: LayoutDirection::TopToBottom,
-            sizing: sizing!{ Grow, Grow }
+fn create_element() -> Result<Element, RlayError> {
+    let x = sizing!(Grow, Grow);
+
+    rlay!({ background_color = BLUE,
+            padding = [32, 32, 32, 32],
+            child_gap = 32,
+            sizing = { Grow, Grow }
           }
         {
             rlay!({
-                background_color: PINK,
-                sizing: sizing!(Fixed(150), Fixed(150))
+                background_color = PINK,
+                sizing = x,
             });
 
             rlay!({
-                background_color: YELLOW,
-                sizing: sizing!(Grow(100.0 .. 200.0), Grow)//Fixed(100))
+                background_color = YELLOW,
+                sizing = {Grow(20.0 .. 200.0), Grow}
             });
 
             rlay!({
-                background_color: ORANGE,
-                sizing: sizing!(Grow, Grow)//Fixed(100))
+                background_color = ORANGE,
+                sizing = {Grow, Grow}
             });
 
             rlay!({
-                background_color: GREEN,
-                sizing: sizing!(Fixed(150), Fixed(150))
+                background_color = GREEN,
+                sizing = {width = Fixed(150), height = Fixed(150)}
             });
         }
     );
