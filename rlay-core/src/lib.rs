@@ -16,45 +16,6 @@ mod renderer;
 pub mod macroquad_renderer;
 
 #[macro_export]
-macro_rules! rlay_old {
-    ({$($val:ident = $exp:expr),* $(,)?}) => {{
-        #[allow(clippy::needless_update)]
-        {
-            $crate::get_ctx().lock().unwrap().open_element(
-                $crate::Element::new($crate::ElementConfig {
-                    layout: $crate::ElementLayoutConfig {
-                        $($val : $exp.into()),*, ..Default::default()
-                    },
-                    ..Default::default()
-                })
-            );
-        }
-        {
-            $crate::get_ctx().lock().unwrap().close_element();
-        }
-    }};
-    ({$($val:ident = $exp:expr),* $(,)?} $child:block) => {{
-        #[allow(clippy::needless_update)]
-        {
-            $crate::get_ctx().lock().unwrap().open_element(
-                $crate::Element::new($crate::ElementConfig {
-                    layout: $crate::ElementLayoutConfig {
-                        $($val : $exp.into()),*, ..Default::default()
-                    },
-                    ..Default::default()
-                })
-            );
-        }
-        {
-            $child
-        }
-        {
-            $crate::get_ctx().lock().unwrap().close_element();
-        }
-        }};
-}
-
-#[macro_export]
 macro_rules! rlay {
     ({$($config:tt)*}) => {{
         #[allow(clippy::needless_update)]
@@ -66,7 +27,7 @@ macro_rules! rlay {
             };
 
             $crate::get_ctx().lock().unwrap().open_element(
-                $crate::Element::new(config)
+                $crate::Element::new_container(config)
             );
         }
         {
@@ -83,7 +44,7 @@ macro_rules! rlay {
             };
 
             $crate::get_ctx().lock().unwrap().open_element(
-                $crate::Element::new(config)
+                $crate::Element::new_container(config)
             );
         }
         {
@@ -93,6 +54,30 @@ macro_rules! rlay {
             $crate::get_ctx().lock().unwrap().close_element();
         }
         }};
+}
+
+#[macro_export]
+macro_rules! text {
+    ($text:expr, {$($config:tt)*}) => {{
+        #[allow(clippy::needless_update)]
+        {
+            let text_config = {
+                let mut config = $crate::TextConfig::default();
+                $crate::_rlay!(config; $($config)*);
+                config
+            };
+
+            $crate::get_ctx().lock().unwrap().open_element(
+                $crate::Element::new($crate::ElementData::Text {
+                    config: text_config,
+                    data: $text.to_string(),
+                })
+            );
+        }
+        {
+            $crate::get_ctx().lock().unwrap().close_element();
+        }
+    }};
 }
 
 #[macro_export]

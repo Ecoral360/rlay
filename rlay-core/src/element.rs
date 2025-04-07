@@ -7,26 +7,38 @@ use std::{
 
 use derive_more::From;
 
-use crate::{Dimension2D, ElementConfig, Vector2D, err::RlayError};
+use crate::{Dimension2D, ElementConfig, ElementData, Vector2D, err::RlayError};
 
 #[derive(Debug)]
 pub struct Element {
-    config: ElementConfig,
+    data: ElementData,
     parent: Option<Weak<Mutex<Element>>>,
     pub(crate) children: Vec<Arc<Mutex<Element>>>,
 }
 
 impl Element {
-    pub fn new(config: ElementConfig) -> Self {
+    pub fn new(data: ElementData) -> Self {
         Self {
-            config,
+            data,
+            parent: None,
+            children: vec![],
+        }
+    }
+
+    pub fn new_container(config: ElementConfig) -> Self {
+        Self {
+            data: ElementData::Container { config },
             parent: None,
             children: vec![],
         }
     }
 
     pub fn config(&self) -> ElementConfig {
-        self.config
+        match &self.data {
+            ElementData::Container { config } => *config,
+            ElementData::Text { config, data } => todo!(),
+            ElementData::Image { config, data } => todo!(),
+        }
     }
 
     pub fn children(&self) -> &Vec<Arc<Mutex<Element>>> {

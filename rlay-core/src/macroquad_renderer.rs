@@ -30,7 +30,7 @@ pub struct MacroquadRenderer;
 
 impl Renderer for MacroquadRenderer {
     fn setup_root(&self, root: Element) -> Element {
-        let mut screen_root = Element::new(ElementConfig {
+        let mut screen_root = Element::new_container(ElementConfig {
             sizing: sizing!(Fixed(screen_width()), Fixed(screen_height())),
             ..Default::default()
         });

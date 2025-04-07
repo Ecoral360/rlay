@@ -336,55 +336,62 @@ pub enum PointCaptureMode {
     Passthrough,
 }
 
-pub trait ImageData: std::fmt::Debug {}
+pub trait ImageData: std::fmt::Debug + Sync + Send {}
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct BorderConfig {
-    color: Color,
-    width: BorderWidth,
+    pub color: Color,
+    pub width: BorderWidth,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct FloatingConfig {
-    offset: Vector2D,
-    expand: Dimension2D,
-    z_index: u16,
-    attach_point: FloatingAttachPoint,
+    pub offset: Vector2D,
+    pub expand: Dimension2D,
+    pub z_index: u16,
+    pub attach_point: FloatingAttachPoint,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct ScrollConfig {
-    horizontal: bool,
-    vertical: bool,
+    pub horizontal: bool,
+    pub vertical: bool,
 }
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct SharedConfig {
-    background_color: Color,
-    corner_radius: CorderRadius,
+    pub background_color: Color,
+    pub corner_radius: CorderRadius,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct TextConfig {
-    color: Color,
-    font_id: u16,
-    font_size: u16,
-    letter_spacing: u16,
-    line_height: u16,
-    wrap_mode: WrapMode,
-    text_alignment: TextAlignment,
+    pub color: Color,
+    pub font_id: u16,
+    pub font_size: u16,
+    pub letter_spacing: u16,
+    pub line_height: u16,
+    pub wrap_mode: WrapMode,
+    pub text_alignment: TextAlignment,
 }
 
 #[derive(Debug, Clone)]
-pub struct ImageType {
-    data: Box<Arc<dyn ImageData>>,
-    src_dimensions: Dimension2D,
+pub struct ImageConfig {
+    pub src_dimensions: Dimension2D,
 }
 
-#[derive(Debug, Default, Clone)]
-pub enum ElementType {
-    #[default]
-    Container,
+#[derive(Debug, Clone)]
+pub enum ElementData {
+    Container {
+        config: ElementConfig,
+    },
 
-    Text(TextConfig),
-    Image(ImageType),
+    Text {
+        config: TextConfig,
+        data: String,
+    },
+
+    Image {
+        config: ImageConfig,
+        data: Box<Arc<dyn ImageData>>,
+    },
 }

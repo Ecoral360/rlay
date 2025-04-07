@@ -1,10 +1,10 @@
-use macroquad::window::next_frame;
+use macroquad::{color::WHITE, window::next_frame};
 use rlay_core::{
     Element, LayoutDirection, Renderer, calculate_layout,
     colors::{BLUE, GREEN, ORANGE, PINK, YELLOW},
     err::RlayError,
     macroquad_renderer::MacroquadRenderer,
-    rlay, sizing, take_root,
+    rlay, sizing, take_root, text,
 };
 
 fn create_element() -> Result<Element, RlayError> {
@@ -27,9 +27,13 @@ fn create_element() -> Result<Element, RlayError> {
             });
 
             rlay!({
-                background_color = ORANGE,
-                sizing = {Grow, Grow}
-            });
+                    background_color = ORANGE,
+                    sizing = {Grow, Grow}
+                }
+            {
+                text!("Hello, world!", { color = WHITE })
+            }
+            );
 
             rlay!({
                 background_color = GREEN,
