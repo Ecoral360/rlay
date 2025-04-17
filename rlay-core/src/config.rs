@@ -357,6 +357,7 @@ pub struct ScrollConfig {
     pub horizontal: bool,
     pub vertical: bool,
 }
+
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct SharedConfig {
     pub background_color: Color,
@@ -374,24 +375,16 @@ pub struct TextConfig {
     pub text_alignment: TextAlignment,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ImageConfig {
     pub src_dimensions: Dimension2D,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ElementData {
-    Container {
-        config: ElementConfig,
-    },
+    Container { config: ElementConfig },
 
-    Text {
-        config: TextConfig,
-        data: String,
-    },
+    Text { config: TextConfig, data: String },
 
-    Image {
-        config: ImageConfig,
-        data: Box<Arc<dyn ImageData>>,
-    },
+    Image { config: ImageConfig, data: Vec<u8> },
 }

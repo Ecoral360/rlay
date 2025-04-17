@@ -1,6 +1,6 @@
 use macroquad::{color::WHITE, window::next_frame};
 use rlay_core::{
-    Element, LayoutDirection, Renderer, calculate_layout,
+    Element, Renderer, calculate_layout,
     colors::{BLUE, GREEN, ORANGE, PINK, YELLOW},
     err::RlayError,
     macroquad_renderer::MacroquadRenderer,

@@ -8,9 +8,7 @@ use std::{
 
 use macroquad::rand::rand;
 
-use crate::{
-    Element, ElementConfig, LayoutDirection, MinMax, Sizing, SizingAxis, err::RlayError,
-};
+use crate::{Element, ElementConfig, LayoutDirection, MinMax, Sizing, SizingAxis, err::RlayError};
 
 macro_rules! def_states {
     ($state_name:ident : $($state:ident $(($($derive:ident),*))?),* $(,)?) => {
@@ -103,7 +101,7 @@ pub struct ElementLayout<S: ElementStep> {
     dimensions: Dimension2D,
     layout_config: ElementConfig,
 
-    children: Vec<ElementLayout<S>>,
+    children: Box<[ElementLayout<S>]>,
 }
 
 impl ElementLayout<Done> {
@@ -111,7 +109,7 @@ impl ElementLayout<Done> {
         position: Vector2D,
         dimensions: Dimension2D,
         config: ElementConfig,
-        children: Vec<ElementLayout<Done>>,
+        children: Box<[ElementLayout<Done>]>,
     ) -> Self {
         Self {
             _marker: PhantomData,
@@ -136,7 +134,7 @@ impl<S: ElementStep> ElementLayout<S> {
         &self.layout_config
     }
 
-    pub fn children(&self) -> &Vec<ElementLayout<S>> {
+    pub fn children(&self) -> &[ElementLayout<S>] {
         &self.children
     }
 }
@@ -180,7 +178,7 @@ impl TryFrom<Element> for ElementLayout<FitSizingWidth> {
                         .map_err(|_| RlayError::ElementCorrupted)
                         .and_then(|c| c.try_into())
                 })
-                .collect::<Result<Vec<_>, _>>()?,
+                .collect::<Result<Box<[_]>, _>>()?,
         })
     }
 }
@@ -202,7 +200,7 @@ impl LayoutStep for ElementLayout<FitSizingWidth> {
             .into_iter()
             .rev()
             .map(|child| child.apply_layout_step())
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Box<[_]>, _>>()?;
 
         let SizingAxis::Fit(min_max) = config.sizing.width else {
             return Ok(ElementLayout {
@@ -362,7 +360,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
         let children = children
             .into_iter()
             .map(|mut child| child.apply_layout_step())
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Box<[_]>, _>>()?;
 
         Ok(ElementLayout {
             _marker: PhantomData,
@@ -385,7 +383,7 @@ impl LayoutStep for ElementLayout<FitSizingHeight> {
             .into_iter()
             .rev()
             .map(|child| child.apply_layout_step())
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Box<[_]>, _>>()?;
 
         let SizingAxis::Fit(min_max) = config.sizing.height else {
             return Ok(ElementLayout {
@@ -450,7 +448,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
                 }
                 child.apply_layout_step()
             })
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Box<[_]>, _>>()?;
 
         Ok(ElementLayout {
             _marker: PhantomData,
@@ -501,7 +499,7 @@ impl LayoutStep for ElementLayout<Positions> {
 
                 Some(Ok(layout))
             })
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Box<[_]>, _>>()?;
 
         Ok(ElementLayout {
             _marker: PhantomData,
