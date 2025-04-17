@@ -1,6 +1,10 @@
 use macroquad::{text::load_ttf_font, window::next_frame};
 use rlay_core::{
-    calculate_layout, colors::{BLACK, BLUE, GREEN, ORANGE, PINK, WHITE, YELLOW}, err::RlayError, macroquad_renderer::MacroquadRenderer, rlay, sizing, text, AppCtx, Padding, Renderer
+    AppCtx, Padding, Renderer, calculate_layout,
+    colors::{BLACK, BLUE, GREEN, ORANGE, PINK, WHITE, YELLOW},
+    err::RlayError,
+    macroquad_renderer::MacroquadRenderer,
+    rlay, sizing, text,
 };
 
 fn create_element(ctx: &mut AppCtx) -> Result<(), RlayError> {
@@ -28,7 +32,7 @@ fn create_element(ctx: &mut AppCtx) -> Result<(), RlayError> {
                     padding = Padding::default().left(15).top(20),
                 }
             {
-                text!(ctx, "Hello, world!", { color = WHITE })
+                text!(ctx, "Hello, world!", { color = WHITE, font_name = "Futura" })
             }
             );
 

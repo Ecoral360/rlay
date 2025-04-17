@@ -105,6 +105,10 @@ macro_rules! _rlay_field {
         $crate::sizing!($($val)*)
     };
 
+    (font_name = $val:expr) => {
+        Some($val.into())
+    };
+
     ($field:ident = $val:expr) => {
         $val.into()
     };
