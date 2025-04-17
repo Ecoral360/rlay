@@ -1,15 +1,15 @@
 use std::sync::{Arc, Mutex};
 
 use macroquad::{
-    color::{BLACK, BLUE, Color, PINK, RED, YELLOW},
+    color::{Color, BLACK, BLUE, PINK, RED, YELLOW},
     miniquad::window::screen_size,
     shapes::draw_rectangle,
+    text::{draw_text, measure_text},
     window::{clear_background, request_new_screen_size, screen_height, screen_width},
 };
 
 use crate::{
-    AppCtx, Color as RlayColor, Done, ElementConfig, Element, ElementLayout,
-    Positions,
+    AppCtx, Color as RlayColor, Done, Element, ElementConfig, ElementLayout, Positions,
     layout::{Dimension2D, Vector2D},
     renderer::Renderer,
     sizing,
@@ -53,11 +53,21 @@ impl Renderer for MacroquadRenderer {
         let Vector2D { x, y } = element.position();
         let Dimension2D { width, height } = element.dimensions();
 
-        let bg_color = element.layout_config().background_color.into();
-        draw_rectangle(x, y, width, height, bg_color);
+        match element.data() {
+            Element::Container { config } => {
+                let bg_color = config.background_color.into();
+                draw_rectangle(x, y, width, height, bg_color);
 
-        for child in element.children() {
-            self.draw_element(child);
+                for child in element.children() {
+                    self.draw_element(child);
+                }
+            }
+            Element::Text { config, data } => {
+                let text_dimensions = measure_text(data, None, config.font_size, 1.0);
+
+                draw_text(&data, x, y + text_dimensions.height, config.font_size as f32, config.color.into());
+            }
+            Element::Image { config, data } => todo!(),
         }
     }
 }

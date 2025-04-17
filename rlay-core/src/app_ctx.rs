@@ -1,12 +1,15 @@
 use std::{
+    collections::HashMap,
     fmt::write,
     marker::PhantomData,
     sync::{Arc, LazyLock, Mutex},
 };
 
+use macroquad::text::{Font, TextDimensions, load_ttf_font, measure_text};
+
 use crate::{
-    Dimension2D, Element, ElementLayout, FitSizingWidth, Initial, MinMax, Sizing,
-    SizingAxis, Vector2D,
+    Dimension2D, Element, ElementLayout, FitSizingWidth, Initial, MinMax, Sizing, SizingAxis,
+    Vector2D,
     err::RlayError,
     mem::{ArenaElement, ArenaTree, ElementNode, MemError},
 };
@@ -14,6 +17,7 @@ use crate::{
 pub struct AppCtx {
     parent_stack: Vec<usize>,
     elements: ArenaElement,
+    fonts: HashMap<String, Font>,
 }
 
 impl AppCtx {
@@ -21,7 +25,12 @@ impl AppCtx {
         Self {
             parent_stack: vec![],
             elements: ArenaElement::new(),
+            fonts: HashMap::new(),
         }
+    }
+
+    pub fn add_font(&mut self, name: String, font: Font) {
+        self.fonts.insert(name, font);
     }
 
     pub fn elements(&self) -> &ArenaElement {
@@ -61,9 +70,24 @@ impl AppCtx {
     }
 }
 
+impl TryFrom<AppCtx> for ElementLayout<Initial> {
+    type Error = RlayError;
+
+    fn try_from(value: AppCtx) -> Result<Self, Self::Error> {
+        let root = *value.parent_stack.get(0).ok_or(RlayError::NoRoot)?;
+        let root_value = value
+            .elements
+            .get_val(root)
+            .ok_or(RlayError::ElementNotFound)?;
+
+        unpack_node(&value, &value.elements, root_value.clone())
+    }
+}
+
 fn unpack_node(
+    ctx: &AppCtx,
     arena: &ArenaElement,
-    node: &Element,
+    node: Element,
 ) -> Result<ElementLayout<Initial>, RlayError> {
     match node {
         Element::Container { config } => {
@@ -82,35 +106,46 @@ fn unpack_node(
                 SizingAxis::Percent(_) => todo!(),
             };
 
-            let idx = arena.find(node).ok_or(RlayError::ElementNotFound)?;
+            let idx = arena.find(&node).ok_or(RlayError::ElementNotFound)?;
             let children = arena.get_children_val(idx);
 
             Ok(ElementLayout::new(
                 Vector2D::default(),
                 Dimension2D::new(width, height),
-                *config,
+                node.clone(),
                 children
                     .unwrap_or_default()
                     .into_iter()
-                    .map(|child| unpack_node(arena, child))
+                    .map(|child| unpack_node(ctx, arena, child.clone()))
                     .collect::<Result<Box<[_]>, _>>()?,
             ))
         }
-        Element::Text { config, data } => todo!(),
+        Element::Text {
+            ref config,
+            ref data,
+        } => {
+            let TextDimensions {
+                width,
+                height,
+                offset_y,
+            } = measure_text(
+                data,
+                config
+                    .font_name
+                    .as_ref()
+                    .map(|name| ctx.fonts.get(name))
+                    .flatten(),
+                config.font_size,
+                1.0,
+            );
+
+            Ok(ElementLayout::new(
+                Vector2D::default(),
+                Dimension2D::new(width, height),
+                node.clone(),
+                Box::new([]),
+            ))
+        }
         Element::Image { config, data } => todo!(),
-    }
-}
-
-impl TryFrom<AppCtx> for ElementLayout<Initial> {
-    type Error = RlayError;
-
-    fn try_from(value: AppCtx) -> Result<Self, Self::Error> {
-        let root = *value.parent_stack.get(0).ok_or(RlayError::NoRoot)?;
-        let root_value = value
-            .elements
-            .get_val(root)
-            .ok_or(RlayError::ElementNotFound)?;
-
-        unpack_node(&value.elements, root_value)
     }
 }

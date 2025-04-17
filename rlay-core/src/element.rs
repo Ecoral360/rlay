@@ -123,6 +123,25 @@ impl Padding {
         }
     }
 
+    pub fn left(self, val: i32) -> Self {
+        Self { left: val, ..self }
+    }
+
+    pub fn right(self, val: i32) -> Self {
+        Self { right: val, ..self }
+    }
+
+    pub fn top(self, val: i32) -> Self {
+        Self { top: val, ..self }
+    }
+
+    pub fn bottom(self, val: i32) -> Self {
+        Self {
+            bottom: val,
+            ..self
+        }
+    }
+
     pub const fn x(&self) -> i32 {
         self.left + self.right
     }
@@ -364,15 +383,31 @@ pub struct SharedConfig {
     pub corner_radius: CorderRadius,
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TextConfig {
     pub color: Color,
     pub font_id: u16,
     pub font_size: u16,
+    pub font_name: Option<String>,
     pub letter_spacing: u16,
     pub line_height: u16,
     pub wrap_mode: WrapMode,
     pub text_alignment: TextAlignment,
+}
+
+impl Default for TextConfig {
+    fn default() -> Self {
+        Self {
+            color: Default::default(),
+            font_id: Default::default(),
+            font_size: 20,
+            font_name: None,
+            letter_spacing: 1,
+            line_height: 1,
+            wrap_mode: WrapMode::default(),
+            text_alignment: TextAlignment::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -68,7 +68,7 @@ macro_rules! text {
             };
 
             $ctx.open_element(
-                $crate::ElementData::Text {
+                $crate::Element::Text {
                     config: text_config,
                     data: $text.to_string(),
                 }
