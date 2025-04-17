@@ -26,15 +26,15 @@ fn create_element(ctx: &mut AppCtx) -> Result<(), RlayError> {
                 sizing = {Grow(20.0 .. 200.0), Grow}
             });
 
-            // rlay!(ctx, {
-            //         background_color = ORANGE,
-            //         sizing = {Grow, Grow}
-            //     }
-            // {
-            //     // text!(ctx, "Hello, world!", { color = WHITE })
-            // }
-            // );
-            //
+            rlay!(ctx, {
+                    background_color = ORANGE,
+                    sizing = {Grow, Grow}
+                }
+            {
+                // text!(ctx, "Hello, world!", { color = WHITE })
+            }
+            );
+
             rlay!(ctx, {
                 background_color = GREEN,
                 sizing = {width = Fixed(150), height = Fixed(150)}

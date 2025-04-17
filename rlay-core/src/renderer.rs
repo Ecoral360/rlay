@@ -1,4 +1,4 @@
-use crate::{AppCtx, Done, Element, ElementLayout};
+use crate::{AppCtx, Done, ElementLayout};
 
 pub trait Renderer {
     fn draw_rectangle(el: ElementLayout<Done>) {

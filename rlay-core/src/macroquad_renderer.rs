@@ -8,7 +8,7 @@ use macroquad::{
 };
 
 use crate::{
-    AppCtx, Color as RlayColor, Done, Element, ElementConfig, ElementData, ElementLayout,
+    AppCtx, Color as RlayColor, Done, ElementConfig, Element, ElementLayout,
     Positions,
     layout::{Dimension2D, Vector2D},
     renderer::Renderer,
@@ -31,7 +31,7 @@ pub struct MacroquadRenderer {}
 
 impl Renderer for MacroquadRenderer {
     fn setup(&self, ctx: &mut AppCtx) {
-        let mut screen_root = ElementData::Container {
+        let mut screen_root = Element::Container {
             config: ElementConfig {
                 sizing: sizing!(Fixed(screen_width()), Fixed(screen_height())),
                 ..Default::default()

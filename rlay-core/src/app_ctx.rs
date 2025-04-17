@@ -5,8 +5,8 @@ use std::{
 };
 
 use crate::{
-    Dimension2D, Element, ElementData, ElementLayout, FitSizingWidth, MinMax, Sizing, SizingAxis,
-    Vector2D,
+    Dimension2D, Element, ElementLayout, FitSizingWidth, Initial, MinMax, Sizing,
+    SizingAxis, Vector2D,
     err::RlayError,
     mem::{ArenaElement, ArenaTree, ElementNode, MemError},
 };
@@ -28,7 +28,7 @@ impl AppCtx {
         &self.elements
     }
 
-    pub fn set_root(&mut self, new_root: ElementData) -> Result<usize, crate::mem::MemError> {
+    pub fn set_root(&mut self, new_root: Element) -> Result<usize, MemError> {
         let root_idx = self.elements.insert_node(new_root, None)?;
 
         let Some(old_root_idx) = self.parent_stack.first().copied() else {
@@ -41,7 +41,7 @@ impl AppCtx {
         Ok(root_idx)
     }
 
-    pub fn open_element(&mut self, el: ElementData) -> usize {
+    pub fn open_element(&mut self, el: Element) -> usize {
         let parent_idx = self.parent_stack.last().copied();
 
         let node_idx = self
@@ -63,10 +63,10 @@ impl AppCtx {
 
 fn unpack_node(
     arena: &ArenaElement,
-    node: &ElementData,
-) -> Result<ElementLayout<FitSizingWidth>, RlayError> {
+    node: &Element,
+) -> Result<ElementLayout<Initial>, RlayError> {
     match node {
-        ElementData::Container { config } => {
+        Element::Container { config } => {
             let Sizing { width, height } = config.sizing;
 
             let width = match width {
@@ -96,12 +96,12 @@ fn unpack_node(
                     .collect::<Result<Box<[_]>, _>>()?,
             ))
         }
-        ElementData::Text { config, data } => todo!(),
-        ElementData::Image { config, data } => todo!(),
+        Element::Text { config, data } => todo!(),
+        Element::Image { config, data } => todo!(),
     }
 }
 
-impl TryFrom<AppCtx> for ElementLayout<FitSizingWidth> {
+impl TryFrom<AppCtx> for ElementLayout<Initial> {
     type Error = RlayError;
 
     fn try_from(value: AppCtx) -> Result<Self, Self::Error> {

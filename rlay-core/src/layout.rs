@@ -9,7 +9,7 @@ use std::{
 use macroquad::rand::rand;
 
 use crate::{
-    Element, ElementConfig, LayoutDirection, MinMax, Sizing, SizingAxis,
+    ElementConfig, LayoutDirection, MinMax, Sizing, SizingAxis,
     err::RlayError,
     mem::{ArenaElement, ElementNode},
 };
@@ -89,6 +89,7 @@ impl Sub for Dimension2D {
 
 def_states! {
     ElementStep :
+        Initial(Debug),
         FitSizingWidth(Debug),
         GrowShrinkSizingWidth(Debug),
         WrapText(Debug),
@@ -143,54 +144,30 @@ impl<S: ElementStep> ElementLayout<S> {
     }
 }
 
-// The start of the chain
-impl TryFrom<Element> for ElementLayout<FitSizingWidth> {
-    type Error = RlayError;
-
-    fn try_from(mut value: Element) -> Result<Self, Self::Error> {
-        let mut children = Vec::with_capacity(value.children.len());
-
-        while let Some(child) = value.children.pop() {
-            children.push(Arc::into_inner(child).ok_or(RlayError::ElementBorrowed)?);
-        }
-
-        let Sizing { width, height } = value.config().sizing;
-
-        let width = match width {
-            SizingAxis::Fixed(w) => w,
-            SizingAxis::Fit(MinMax { min, .. }) => min.unwrap_or(0.0),
-            SizingAxis::Grow(MinMax { min, .. }) => min.unwrap_or(0.0),
-            SizingAxis::Percent(_) => todo!(),
-        };
-        let height = match height {
-            SizingAxis::Fixed(h) => h,
-            SizingAxis::Fit(MinMax { min, .. }) => min.unwrap_or(0.0),
-            SizingAxis::Grow(MinMax { min, .. }) => min.unwrap_or(0.0),
-            SizingAxis::Percent(_) => todo!(),
-        };
-
-        Ok(ElementLayout {
-            _marker: PhantomData,
-            position: Vector2D::default(),
-            dimensions: Dimension2D::new(width, height),
-            layout_config: value.config(),
-            children: children
-                .into_iter()
-                .map(|child| {
-                    child
-                        .into_inner()
-                        .map_err(|_| RlayError::ElementCorrupted)
-                        .and_then(|c| c.try_into())
-                })
-                .collect::<Result<Box<[_]>, _>>()?,
-        })
-    }
-}
-
 trait LayoutStep {
     type NextStep: ElementStep;
 
     fn apply_layout_step(self) -> Result<ElementLayout<Self::NextStep>, RlayError>;
+}
+
+/// No op to let us change what the first step should be without having to
+/// change the public facing API
+impl LayoutStep for ElementLayout<Initial> {
+    type NextStep = FitSizingWidth;
+
+    fn apply_layout_step(self) -> Result<ElementLayout<Self::NextStep>, RlayError> {
+        Ok(ElementLayout {
+            _marker: PhantomData,
+            position: self.position,
+            dimensions: self.dimensions,
+            layout_config: self.layout_config,
+            children: self
+                .children
+                .into_iter()
+                .map(|child| child.apply_layout_step())
+                .collect::<Result<_, _>>()?,
+        })
+    }
 }
 
 impl LayoutStep for ElementLayout<FitSizingWidth> {
@@ -204,7 +181,7 @@ impl LayoutStep for ElementLayout<FitSizingWidth> {
             .into_iter()
             .rev()
             .map(|child| child.apply_layout_step())
-            .collect::<Result<Box<[_]>, _>>()?;
+            .collect::<Result<_, _>>()?;
 
         let SizingAxis::Fit(min_max) = config.sizing.width else {
             return Ok(ElementLayout {
@@ -515,10 +492,8 @@ impl LayoutStep for ElementLayout<Positions> {
     }
 }
 
-pub fn calculate_layout(
-    root: ElementLayout<FitSizingWidth>,
-) -> Result<ElementLayout<Done>, RlayError> {
-    root
+pub fn calculate_layout(root: ElementLayout<Initial>) -> Result<ElementLayout<Done>, RlayError> {
+    root.apply_layout_step()?
         .apply_layout_step()?
         .apply_layout_step()?
         .apply_layout_step()?

@@ -1,7 +1,7 @@
 use std::{usize, vec};
 use thiserror::Error;
 
-use crate::ElementData;
+use crate::Element;
 
 #[derive(Error, Debug)]
 pub enum MemError {
@@ -167,5 +167,5 @@ where
     }
 }
 
-pub type ElementNode = Node<ElementData>;
-pub type ArenaElement = ArenaTree<ElementData>;
+pub type ElementNode = Node<Element>;
+pub type ArenaElement = ArenaTree<Element>;

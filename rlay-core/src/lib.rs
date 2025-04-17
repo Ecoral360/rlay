@@ -1,19 +1,17 @@
 #![allow(unused)]
 
 pub use app_ctx::*;
-pub use config::*;
 pub use element::*;
 pub use layout::*;
 pub use renderer::*;
 
 mod app_ctx;
-mod config;
+mod commands;
 mod element;
 pub mod err;
 mod layout;
-mod renderer;
 mod mem;
-mod commands;
+mod renderer;
 
 pub mod macroquad_renderer;
 
@@ -29,7 +27,7 @@ macro_rules! rlay {
             };
 
             $ctx.open_element(
-                $crate::ElementData::Container {config}
+                $crate::Element::Container {config}
             );
         }
         {
@@ -46,7 +44,7 @@ macro_rules! rlay {
             };
 
             $ctx.open_element(
-                $crate::ElementData::Container {config}
+                $crate::Element::Container {config}
             );
         }
         {
