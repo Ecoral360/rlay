@@ -8,7 +8,8 @@ use macroquad::{
 };
 
 use crate::{
-    Color as RlayColor, Done, Element, ElementConfig, ElementLayout, Positions,
+    AppCtx, Color as RlayColor, Done, Element, ElementConfig, ElementData, ElementLayout,
+    Positions,
     layout::{Dimension2D, Vector2D},
     renderer::Renderer,
     sizing,
@@ -26,17 +27,18 @@ impl From<Color> for RlayColor {
     }
 }
 
-pub struct MacroquadRenderer;
+pub struct MacroquadRenderer {}
 
 impl Renderer for MacroquadRenderer {
-    fn setup_root(&self, root: Element) -> Element {
-        let mut screen_root = Element::new_container(ElementConfig {
-            sizing: sizing!(Fixed(screen_width()), Fixed(screen_height())),
-            ..Default::default()
-        });
+    fn setup(&self, ctx: &mut AppCtx) {
+        let mut screen_root = ElementData::Container {
+            config: ElementConfig {
+                sizing: sizing!(Fixed(screen_width()), Fixed(screen_height())),
+                ..Default::default()
+            },
+        };
 
-        screen_root.add_child(Arc::new(Mutex::new(root)));
-        screen_root
+        ctx.set_root(screen_root);
     }
 
     fn draw_root(&self, root: ElementLayout<Done>) {

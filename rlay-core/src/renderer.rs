@@ -1,4 +1,4 @@
-use crate::{Done, Element, ElementLayout};
+use crate::{AppCtx, Done, Element, ElementLayout};
 
 pub trait Renderer {
     fn draw_rectangle(el: ElementLayout<Done>) {
@@ -9,7 +9,7 @@ pub trait Renderer {
         todo!()
     }
 
-    fn setup_root(&self, root: Element) -> Element;
+    fn setup(&self, ctx: &mut AppCtx);
 
     fn draw_root(&self, root: ElementLayout<Done>);
     fn draw_element(&self, element: &ElementLayout<Done>);

@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use crate::mem::MemError;
+
 #[derive(Error, Debug)]
 pub enum RlayError {
     #[error("No root element")]
@@ -16,4 +18,10 @@ pub enum RlayError {
 
     #[error("Cannot take element because the mutex was corrupted")]
     ElementCorrupted,
+
+    #[error("Cannot find element in memory")]
+    ElementNotFound,
+
+    #[error(transparent)]
+    MemError(MemError),
 }

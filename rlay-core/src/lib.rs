@@ -12,12 +12,14 @@ mod element;
 pub mod err;
 mod layout;
 mod renderer;
+mod mem;
+mod commands;
 
 pub mod macroquad_renderer;
 
 #[macro_export]
 macro_rules! rlay {
-    ({$($config:tt)*}) => {{
+    ($ctx:ident, {$($config:tt)*}) => {{
         #[allow(clippy::needless_update)]
         {
             let config = {
@@ -26,15 +28,15 @@ macro_rules! rlay {
                 config
             };
 
-            $crate::get_ctx().lock().unwrap().open_element(
-                $crate::Element::new_container(config)
+            $ctx.open_element(
+                $crate::ElementData::Container {config}
             );
         }
         {
-            $crate::get_ctx().lock().unwrap().close_element();
+            $ctx.close_element();
         }
     }};
-    ({$($config:tt)*} $child:block) => {{
+    ($ctx:ident, {$($config:tt)*} $child:block) => {{
         #[allow(clippy::needless_update)]
         {
             let config = {
@@ -43,22 +45,22 @@ macro_rules! rlay {
                 config
             };
 
-            $crate::get_ctx().lock().unwrap().open_element(
-                $crate::Element::new_container(config)
+            $ctx.open_element(
+                $crate::ElementData::Container {config}
             );
         }
         {
             $child
         }
         {
-            $crate::get_ctx().lock().unwrap().close_element();
+            $ctx.close_element();
         }
         }};
 }
 
 #[macro_export]
 macro_rules! text {
-    ($text:expr, {$($config:tt)*}) => {{
+    ($ctx:ident, $text:expr, {$($config:tt)*}) => {{
         #[allow(clippy::needless_update)]
         {
             let text_config = {
@@ -67,15 +69,15 @@ macro_rules! text {
                 config
             };
 
-            $crate::get_ctx().lock().unwrap().open_element(
-                $crate::Element::new($crate::ElementData::Text {
+            $ctx.open_element(
+                $crate::ElementData::Text {
                     config: text_config,
                     data: $text.to_string(),
-                })
+                }
             );
         }
         {
-            $crate::get_ctx().lock().unwrap().close_element();
+            $ctx.close_element();
         }
     }};
 }

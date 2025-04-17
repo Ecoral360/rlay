@@ -8,7 +8,11 @@ use std::{
 
 use macroquad::rand::rand;
 
-use crate::{Element, ElementConfig, LayoutDirection, MinMax, Sizing, SizingAxis, err::RlayError};
+use crate::{
+    Element, ElementConfig, LayoutDirection, MinMax, Sizing, SizingAxis,
+    err::RlayError,
+    mem::{ArenaElement, ElementNode},
+};
 
 macro_rules! def_states {
     ($state_name:ident : $($state:ident $(($($derive:ident),*))?),* $(,)?) => {
@@ -104,12 +108,12 @@ pub struct ElementLayout<S: ElementStep> {
     children: Box<[ElementLayout<S>]>,
 }
 
-impl ElementLayout<Done> {
+impl<S: ElementStep> ElementLayout<S> {
     pub fn new(
         position: Vector2D,
         dimensions: Dimension2D,
         config: ElementConfig,
-        children: Box<[ElementLayout<Done>]>,
+        children: Box<[ElementLayout<S>]>,
     ) -> Self {
         Self {
             _marker: PhantomData,
@@ -308,10 +312,10 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
                 .collect();
         }
 
-        let mut children_grow = children
-            .iter_mut()
-            .filter(|child| matches!(child.layout_config().sizing.width, SizingAxis::Grow(..)))
-            .collect::<Vec<_>>();
+        // let mut children_grow = children
+        //     .iter_mut()
+        //     .filter(|child| matches!(child.layout_config().sizing.width, SizingAxis::Grow(..)))
+        //     .collect::<Vec<_>>();
 
         // while remaining_width < 0.0 && !children_grow.is_empty() {
         //     let mut largest = children_grow[0].dimensions.width;
@@ -511,10 +515,10 @@ impl LayoutStep for ElementLayout<Positions> {
     }
 }
 
-pub fn calculate_layout(root: Element) -> Result<ElementLayout<Done>, RlayError> {
-    let start: ElementLayout<FitSizingWidth> = root.try_into()?;
-
-    start
+pub fn calculate_layout(
+    root: ElementLayout<FitSizingWidth>,
+) -> Result<ElementLayout<Done>, RlayError> {
+    root
         .apply_layout_step()?
         .apply_layout_step()?
         .apply_layout_step()?

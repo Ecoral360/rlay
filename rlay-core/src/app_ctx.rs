@@ -1,66 +1,116 @@
 use std::{
     fmt::write,
+    marker::PhantomData,
     sync::{Arc, LazyLock, Mutex},
 };
 
-use crate::{Element, err::RlayError};
+use crate::{
+    Dimension2D, Element, ElementData, ElementLayout, FitSizingWidth, MinMax, Sizing, SizingAxis,
+    Vector2D,
+    err::RlayError,
+    mem::{ArenaElement, ArenaTree, ElementNode, MemError},
+};
 
-#[derive(Debug, Default)]
 pub struct AppCtx {
-    root: Option<Arc<Mutex<Element>>>,
-    elements: Vec<Arc<Mutex<Element>>>,
+    parent_stack: Vec<usize>,
+    elements: ArenaElement,
 }
 
 impl AppCtx {
-    pub(crate) fn get_root(&self) -> Option<Arc<Mutex<Element>>> {
-        self.root.as_ref().map(Arc::clone)
+    pub fn new() -> Self {
+        Self {
+            parent_stack: vec![],
+            elements: ArenaElement::new(),
+        }
     }
 
-    pub(crate) fn take_root(&mut self) -> Result<Element, RlayError> {
-        let el = self.root.take().ok_or(RlayError::NoRoot)?;
-        Arc::into_inner(el)
-            .ok_or(RlayError::RootBorrowed)?
-            .into_inner()
-            .map_err(|_| RlayError::RootCorrupted)
+    pub fn elements(&self) -> &ArenaElement {
+        &self.elements
     }
 
-    pub fn open_element(&mut self, el: Element) {
-        let new_el = Arc::new(Mutex::new(el));
-        if self.root.is_none() {
-            self.root = Some(Arc::clone(&new_el));
-        }
+    pub fn set_root(&mut self, new_root: ElementData) -> Result<usize, crate::mem::MemError> {
+        let root_idx = self.elements.insert_node(new_root, None)?;
 
-        if let Some(parent) = self.elements.last() {
-            if let Ok(mut parent_lock) = parent.lock() {
-                parent_lock.add_child(Arc::clone(&new_el));
-            }
-            new_el.lock().unwrap().add_parent(Arc::downgrade(parent));
-        }
-        self.elements.push(new_el);
+        let Some(old_root_idx) = self.parent_stack.first().copied() else {
+            return Ok(root_idx);
+        };
+
+        self.elements.set_parent(root_idx, old_root_idx)?;
+        self.parent_stack[0] = root_idx;
+
+        Ok(root_idx)
+    }
+
+    pub fn open_element(&mut self, el: ElementData) -> usize {
+        let parent_idx = self.parent_stack.last().copied();
+
+        let node_idx = self
+            .elements
+            .insert_node(el, parent_idx)
+            .expect("Valid parent");
+
+        self.parent_stack.push(node_idx);
+        node_idx
     }
 
     pub fn close_element(&mut self) {
-        // We don't remove the root
-        let el = self.elements.pop();
-
-        el.expect("At least an element")
-            .lock()
-            .expect("Not corrupted")
-            .close();
+        if self.parent_stack.len() == 1 {
+            return;
+        }
+        self.parent_stack.pop().expect("At least an element");
     }
 }
 
-static APP_CTX: LazyLock<Arc<Mutex<AppCtx>>> =
-    LazyLock::new(|| Arc::new(Mutex::new(AppCtx::default())));
+fn unpack_node(
+    arena: &ArenaElement,
+    node: &ElementData,
+) -> Result<ElementLayout<FitSizingWidth>, RlayError> {
+    match node {
+        ElementData::Container { config } => {
+            let Sizing { width, height } = config.sizing;
 
-pub fn get_ctx() -> Arc<Mutex<AppCtx>> {
-    Arc::clone(&APP_CTX)
+            let width = match width {
+                SizingAxis::Fixed(w) => w,
+                SizingAxis::Fit(MinMax { min, .. }) => min.unwrap_or(0.0),
+                SizingAxis::Grow(MinMax { min, .. }) => min.unwrap_or(0.0),
+                SizingAxis::Percent(_) => todo!(),
+            };
+            let height = match height {
+                SizingAxis::Fixed(h) => h,
+                SizingAxis::Fit(MinMax { min, .. }) => min.unwrap_or(0.0),
+                SizingAxis::Grow(MinMax { min, .. }) => min.unwrap_or(0.0),
+                SizingAxis::Percent(_) => todo!(),
+            };
+
+            let idx = arena.find(node).ok_or(RlayError::ElementNotFound)?;
+            let children = arena.get_children_val(idx);
+
+            Ok(ElementLayout::new(
+                Vector2D::default(),
+                Dimension2D::new(width, height),
+                *config,
+                children
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|child| unpack_node(arena, child))
+                    .collect::<Result<Box<[_]>, _>>()?,
+            ))
+        }
+        ElementData::Text { config, data } => todo!(),
+        ElementData::Image { config, data } => todo!(),
+    }
 }
 
-pub fn get_root() -> Option<Arc<Mutex<Element>>> {
-    APP_CTX.lock().ok()?.get_root()
-}
+impl TryFrom<AppCtx> for ElementLayout<FitSizingWidth> {
+    type Error = RlayError;
 
-pub fn take_root() -> Result<Element, RlayError> {
-    APP_CTX.lock().expect("Cannot lock the AppCtx").take_root()
+    fn try_from(value: AppCtx) -> Result<Self, Self::Error> {
+        let root = *value.parent_stack.get(0).ok_or(RlayError::NoRoot)?;
+        let root_value = value
+            .elements
+            .get_val(root)
+            .ok_or(RlayError::ElementNotFound)?;
+
+        unpack_node(&value.elements, root_value)
+    }
 }
