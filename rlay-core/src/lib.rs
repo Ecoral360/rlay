@@ -1,19 +1,22 @@
 #![allow(unused)]
 
 pub use app_ctx::*;
-pub use element::*;
+pub use elements::*;
 pub use layout::*;
-pub use renderer::*;
+pub use render::*;
 
 mod app_ctx;
-mod commands;
-mod element;
 pub mod err;
 mod layout;
 mod mem;
-mod renderer;
+mod render;
+pub mod elements;
 
+#[cfg(feature = "macroquad")]
 pub mod macroquad_renderer;
+
+#[cfg(feature = "raylib")]
+pub mod raylib_renderer;
 
 #[macro_export]
 macro_rules! rlay {
@@ -27,7 +30,7 @@ macro_rules! rlay {
             };
 
             $ctx.open_element(
-                $crate::Element::Container {config}
+                $crate::Element::Container($crate::elements::ContainerElement::new(config))
             );
         }
         {
@@ -44,7 +47,7 @@ macro_rules! rlay {
             };
 
             $ctx.open_element(
-                $crate::Element::Container {config}
+                $crate::Element::Container($crate::elements::ContainerElement::new(config))
             );
         }
         {
@@ -68,10 +71,11 @@ macro_rules! text {
             };
 
             $ctx.open_element(
-                $crate::Element::Text {
-                    config: text_config,
-                    data: $text.to_string(),
-                }
+                $crate::Element::Text(
+                    $crate::elements::TextElement::new(
+                        text_config,
+                        $text.to_string(),
+                    ))
             );
         }
         {

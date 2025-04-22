@@ -3,7 +3,6 @@ use rlay_core::{
     AppCtx, Padding, Renderer, calculate_layout,
     colors::{BLACK, BLUE, GREEN, ORANGE, PINK, WHITE, YELLOW},
     err::RlayError,
-    macroquad_renderer::MacroquadRenderer,
     rlay, sizing, text,
 };
 
@@ -48,9 +47,21 @@ fn create_element(ctx: &mut AppCtx) -> Result<(), RlayError> {
     Ok(())
 }
 
+#[cfg(feature = "raylib")]
+fn main() -> Result<(), RlayError> {
+    use rlay_core::{RlayRender, raylib_renderer::RaylibRenderer};
+
+    let renderer = RlayRender::from(RaylibRenderer::new());
+
+    renderer.render(|ctx| create_element(ctx))
+}
+
+#[cfg(feature = "macroquad")]
 #[macroquad::main("")]
 async fn main() -> Result<(), RlayError> {
-    let renderer = MacroquadRenderer {};
+    use rlay_core::macroquad_renderer::MacroquadRenderer;
+
+    let mut renderer = MacroquadRenderer {};
     let font = load_ttf_font("/home/mathis/.local/share/fonts/Futura Medium.ttf")
         .await
         .unwrap();

@@ -6,46 +6,8 @@ use std::{
 };
 
 use derive_more::From;
-use macroquad::color::{RED, YELLOW};
 
-use crate::{Dimension2D, Vector2D, err::RlayError};
-
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
-pub struct MinMax {
-    pub min: Option<f32>,
-    pub max: Option<f32>,
-}
-
-impl MinMax {
-    /// Clamps the value to be >= min and <= max
-    pub fn clamp(&self, value: f32) -> f32 {
-        value.clamp(self.min.unwrap_or(0.0), self.max.unwrap_or(f32::INFINITY))
-    }
-
-    pub fn get_min(&self) -> f32 {
-        self.min.unwrap_or(0.0)
-    }
-
-    pub fn get_max(&self) -> f32 {
-        self.max.unwrap_or(f32::INFINITY)
-    }
-}
-
-impl<T: RangeBounds<f32>> From<T> for MinMax {
-    fn from(value: T) -> Self {
-        let min = match value.start_bound() {
-            std::ops::Bound::Included(v) => Some(*v),
-            std::ops::Bound::Excluded(v) => Some(*v + f32::EPSILON),
-            std::ops::Bound::Unbounded => None,
-        };
-        let max = match value.end_bound() {
-            std::ops::Bound::Included(v) => Some(*v),
-            std::ops::Bound::Excluded(v) => Some(*v - f32::EPSILON),
-            std::ops::Bound::Unbounded => None,
-        };
-        MinMax { min, max }
-    }
-}
+use crate::{Dimension2D, MinMax, Vector2D, err::RlayError};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SizingAxis {
@@ -263,29 +225,6 @@ impl LayoutDirection {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
-pub struct ElementConfig {
-    pub sizing: Sizing,
-    pub background_color: Color,
-    pub padding: Padding,
-    pub layout_direction: LayoutDirection,
-    pub child_gap: i32,
-
-    pub border: Option<BorderConfig>,
-    pub floating: Option<FloatingConfig>,
-    pub scroll: ScrollConfig,
-    pub shared: Option<SharedConfig>,
-}
-
-impl ElementConfig {
-    pub fn padding_in_direction(&self) -> i32 {
-        match self.layout_direction {
-            LayoutDirection::LeftToRight => self.padding.left,
-            LayoutDirection::TopToBottom => self.padding.top,
-        }
-    }
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct BorderWidth {
     left: Option<f32>,
     right: Option<f32>,
@@ -299,23 +238,6 @@ pub struct CorderRadius {
     top_right: Option<f32>,
     bottom_left: Option<f32>,
     bottom_right: Option<f32>,
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum WrapMode {
-    #[default]
-    Words,
-    Newlines,
-    None,
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum TextAlignment {
-    #[default]
-    Left,
-    Center,
-    Right,
-    // Justify,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -355,8 +277,6 @@ pub enum PointCaptureMode {
     Passthrough,
 }
 
-pub trait ImageData: std::fmt::Debug + Sync + Send {}
-
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct BorderConfig {
     pub color: Color,
@@ -383,43 +303,39 @@ pub struct SharedConfig {
     pub corner_radius: CorderRadius,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct TextConfig {
-    pub color: Color,
-    pub font_id: u16,
-    pub font_size: u16,
-    pub font_name: Option<String>,
-    pub letter_spacing: u16,
-    pub line_height: u16,
-    pub wrap_mode: WrapMode,
-    pub text_alignment: TextAlignment,
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub struct ElementConfig {
+    pub sizing: Sizing,
+    pub background_color: Color,
+    pub padding: Padding,
+    pub layout_direction: LayoutDirection,
+    pub child_gap: i32,
+
+    pub border: Option<BorderConfig>,
+    pub floating: Option<FloatingConfig>,
+    pub scroll: ScrollConfig,
+    pub shared: Option<SharedConfig>,
 }
 
-impl Default for TextConfig {
-    fn default() -> Self {
-        Self {
-            color: Default::default(),
-            font_id: Default::default(),
-            font_size: 20,
-            font_name: None,
-            letter_spacing: 1,
-            line_height: 1,
-            wrap_mode: WrapMode::default(),
-            text_alignment: TextAlignment::default(),
+impl ElementConfig {
+    pub fn padding_in_direction(&self) -> i32 {
+        match self.layout_direction {
+            LayoutDirection::LeftToRight => self.padding.left,
+            LayoutDirection::TopToBottom => self.padding.top,
         }
     }
 }
-
 #[derive(Debug, Clone, PartialEq)]
-pub struct ImageConfig {
-    pub src_dimensions: Dimension2D,
+pub struct ContainerElement {
+    pub config: ElementConfig,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Element {
-    Container { config: ElementConfig },
+impl ContainerElement {
+    pub fn new(config: ElementConfig) -> Self {
+        Self { config }
+    }
 
-    Text { config: TextConfig, data: String },
-
-    Image { config: ImageConfig, data: Vec<u8> },
+    pub fn config(&self) -> &ElementConfig {
+        &self.config
+    }
 }

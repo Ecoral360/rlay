@@ -90,7 +90,8 @@ fn unpack_node(
     node: Element,
 ) -> Result<ElementLayout<Initial>, RlayError> {
     match node {
-        Element::Container { config } => {
+        Element::Container(ref container) => {
+            let config = container.config();
             let Sizing { width, height } = config.sizing;
 
             let width = match width {
@@ -120,10 +121,10 @@ fn unpack_node(
                     .collect::<Result<Box<[_]>, _>>()?,
             ))
         }
-        Element::Text {
-            ref config,
-            ref data,
-        } => {
+        Element::Text(ref text) => {
+            let data = text.data();
+            let config = text.config();
+
             let TextDimensions {
                 width,
                 height,
@@ -146,6 +147,6 @@ fn unpack_node(
                 Box::new([]),
             ))
         }
-        Element::Image { config, data } => todo!(),
+        Element::Image(..) => todo!(),
     }
 }

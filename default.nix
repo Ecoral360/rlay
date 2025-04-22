@@ -14,6 +14,12 @@ pkgs.mkShell rec {
     zlib
   ];
 
+  X11_X11_INCLUDE_PATH = "${pkgs.xorg.libX11}/lib";
+  X11_X11_LIB = "${pkgs.xorg.libX11}/lib";
+
+  RUST_ANALYZER_CARGO_FEATURES = "raylib";
+
+
   LD_LIBRARY_PATH = builtins.concatStringsSep ":" [
     "${pkgs.libxkbcommon}/lib"
     "${pkgs.xorg.libX11}/lib"

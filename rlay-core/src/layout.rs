@@ -9,7 +9,7 @@ use std::{
 use macroquad::rand::rand;
 
 use crate::{
-    Element, ElementConfig, LayoutDirection, MinMax, Sizing, SizingAxis,
+    ContainerElement, Element, ElementConfig, LayoutDirection, MinMax, Sizing, SizingAxis,
     err::RlayError,
     mem::{ArenaElement, ElementNode},
 };
@@ -182,7 +182,8 @@ impl LayoutStep for ElementLayout<FitSizingWidth> {
             .collect::<Result<_, _>>()?;
 
         match self.data {
-            Element::Container { config } => {
+            Element::Container(ref container) => {
+                let config = container.config();
                 let SizingAxis::Fit(min_max) = config.sizing.width else {
                     return Ok(ElementLayout {
                         _marker: PhantomData,
@@ -217,14 +218,14 @@ impl LayoutStep for ElementLayout<FitSizingWidth> {
                     children,
                 })
             }
-            Element::Text { .. } => Ok(ElementLayout {
+            Element::Text(..) => Ok(ElementLayout {
                 _marker: PhantomData,
                 position: self.position,
                 dimensions: self.dimensions,
                 data: self.data,
                 children,
             }),
-            Element::Image { config, data } => todo!(),
+            Element::Image(..) => todo!(),
         }
     }
 }
@@ -235,7 +236,8 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
     fn apply_layout_step(self) -> Result<ElementLayout<Self::NextStep>, RlayError> {
         let mut children = self.children;
 
-        if let Element::Container { config } = self.data {
+        if let Element::Container(ref container) = self.data {
+            let config = container.config();
             let children_width = config.layout_direction.value_on_axis(
                 children
                     .iter()
@@ -253,7 +255,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
                 .filter(|child| {
                     matches!(
                         child.data(),
-                        Element::Container {
+                        Element::Container(ContainerElement {
                             config: ElementConfig {
                                 sizing: Sizing {
                                     width: SizingAxis::Grow(..),
@@ -261,7 +263,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
                                 },
                                 ..
                             }
-                        }
+                        })
                     )
                 })
                 .collect::<Vec<_>>();
@@ -289,9 +291,10 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
                 let mut child_rem_idx = vec![];
 
                 for (i, child) in children_grow.iter_mut().enumerate() {
-                    let Element::Container { config } = child.data else {
+                    let Element::Container(ref container) = child.data else {
                         continue;
                     };
+                    let config = container.config();
                     let max = config.sizing.width.get_max();
                     let min = config.sizing.width.get_min();
 
@@ -391,7 +394,8 @@ impl LayoutStep for ElementLayout<FitSizingHeight> {
             .collect::<Result<Box<[_]>, _>>()?;
 
         match self.data {
-            Element::Container { config } => {
+            Element::Container(ref container) => {
+                let config = container.config();
                 let SizingAxis::Fit(min_max) = config.sizing.height else {
                     return Ok(ElementLayout {
                         _marker: PhantomData,
@@ -426,14 +430,14 @@ impl LayoutStep for ElementLayout<FitSizingHeight> {
                     children,
                 })
             }
-            Element::Text { .. } => Ok(ElementLayout {
+            Element::Text(..) => Ok(ElementLayout {
                 _marker: PhantomData,
                 position: self.position,
                 dimensions: self.dimensions,
                 data: self.data,
                 children,
             }),
-            Element::Image { config, data } => todo!(),
+            Element::Image(..) => todo!(),
         }
     }
 }
@@ -445,7 +449,8 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
         let old_children = self.children;
         let children;
 
-        if let Element::Container { config } = self.data {
+        if let Element::Container(ref container) = self.data {
+            let config = container.config();
             let children_height = config.layout_direction.value_on_axis(
                 0.0,
                 old_children
@@ -461,7 +466,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
             children = old_children
                 .into_iter()
                 .map(|mut child| {
-                    if let Element::Container {
+                    if let Element::Container(ContainerElement {
                         config:
                             ElementConfig {
                                 sizing:
@@ -471,7 +476,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
                                     },
                                 ..
                             },
-                    } = child.data()
+                    }) = child.data()
                     {
                         child.dimensions.height = remaining_height;
                     }
@@ -502,7 +507,8 @@ impl LayoutStep for ElementLayout<Positions> {
         let parent_position = self.position;
         let children;
 
-        if let Element::Container { config } = self.data {
+        if let Element::Container(ref container) = self.data {
+            let config = container.config();
             struct StepCtx {
                 offset: f32,
             }
