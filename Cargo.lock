@@ -571,6 +571,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rlay-core-legacy"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "fontdue",
+ "macroquad",
+ "raylib",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "rlay-macros"
 version = "0.1.0"
 dependencies = [

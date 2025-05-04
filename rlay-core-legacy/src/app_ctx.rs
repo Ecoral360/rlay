@@ -29,12 +29,6 @@ impl AppCtx {
         }
     }
 
-    pub fn clear(&mut self) {
-        self.parent_stack.clear();
-        self.elements.clear();
-        self.fonts.clear();
-    }
-
     pub fn add_font(&mut self, name: String, font: Font) {
         self.fonts.insert(name, font);
     }
@@ -76,10 +70,10 @@ impl AppCtx {
     }
 }
 
-impl TryFrom<&mut AppCtx> for ElementLayout<Initial> {
+impl TryFrom<AppCtx> for ElementLayout<Initial> {
     type Error = RlayError;
 
-    fn try_from(value: &mut AppCtx) -> Result<Self, Self::Error> {
+    fn try_from(value: AppCtx) -> Result<Self, Self::Error> {
         let root = *value.parent_stack.get(0).ok_or(RlayError::NoRoot)?;
         let root_value = value
             .elements

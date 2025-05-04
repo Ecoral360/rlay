@@ -1,55 +1,61 @@
 use macroquad::{text::load_ttf_font, window::next_frame};
 use rlay_core::{
-    AppCtx, Padding, Renderer, calculate_layout,
-    colors::{BLACK, BLUE, GREEN, ORANGE, PINK, WHITE, YELLOW},
+    AppCtx, Padding, Render, calculate_layout,
+    colors::{BLUE, GREEN, ORANGE, PINK, WHITE, YELLOW},
     err::RlayError,
     rlay, sizing, text,
 };
 
-fn create_element(ctx: &mut AppCtx) -> Result<(), RlayError> {
-    let x = sizing!(Grow, Grow);
+fn test_create_element(ctx: &mut AppCtx) -> Result<&mut AppCtx, RlayError> {
+    let x = sizing!(Fixed(150), Grow);
 
-    rlay!(ctx, { background_color = BLUE,
+    rlay!(ctx, view(
+            background_color = BLUE,
             padding = [32, 32, 32, 32],
             child_gap = 32,
             sizing = { Grow, Grow }
-          }
+          )
         {
-            rlay!(ctx, {
+            rlay!(ctx, view(
                 background_color = PINK,
                 sizing = x,
-            });
+            ));
 
-            rlay!(ctx, {
+            rlay!(ctx, view(
                 background_color = YELLOW,
                 sizing = {Grow(20.0 .. 200.0), Grow}
-            });
+            ));
 
-            rlay!(ctx, {
+            rlay!(ctx, 
+                view(
                     background_color = ORANGE,
                     sizing = {Grow, Grow},
                     padding = Padding::default().left(15).top(20),
-                }
+                )
             {
-                text!(ctx, "Hello, world!", { color = WHITE, font_name = "Futura" })
+                rlay!(ctx, text("Hello, world!", color = WHITE, font_name = "Futura"))
             }
             );
 
-            rlay!(ctx, {
-                background_color = GREEN,
+            rlay!(ctx, view(
+                background_color = WHITE,
                 sizing = {width = Fixed(150), height = Fixed(150)}
-            });
+            ));
         }
     );
 
     // get_root().ok_or(RlayError::NoRoot)
     // ctx.get_root().ok_or(RlayError::NoRoot)
-    Ok(())
+    Ok(ctx)
+}
+
+fn create_element(ctx: &mut AppCtx) -> Result<&mut AppCtx, RlayError> {
+    Ok(ctx)
 }
 
 #[cfg(feature = "raylib")]
 fn main() -> Result<(), RlayError> {
-    use rlay_core::{RlayRender, raylib_renderer::RaylibRenderer};
+    use rlay_core::{Renderer, raylib_renderer::RaylibRenderer};
 
     let renderer = RlayRender::from(RaylibRenderer::new());
 
@@ -59,23 +65,32 @@ fn main() -> Result<(), RlayError> {
 #[cfg(feature = "macroquad")]
 #[macroquad::main("")]
 async fn main() -> Result<(), RlayError> {
-    use rlay_core::macroquad_renderer::MacroquadRenderer;
+    use rlay_core::{Renderer, RootFactory, macroquad_renderer::MacroquadRenderer};
 
-    let mut renderer = MacroquadRenderer {};
-    let font = load_ttf_font("/home/mathis/.local/share/fonts/Futura Medium.ttf")
-        .await
-        .unwrap();
+    // let mut renderer = MacroquadRenderer {};
+
+    // let font = load_ttf_font("/home/mathis/.local/share/fonts/Futura Medium.ttf")
+    //     .await
+    //     .unwrap();
 
     loop {
-        let mut ctx = AppCtx::new();
-        ctx.add_font("Futura".to_owned(), font.clone());
-        create_element(&mut ctx)?;
-        renderer.setup(&mut ctx);
-
-        let layout = calculate_layout(ctx.try_into()?)?;
-
-        renderer.draw_root(layout);
-
-        next_frame().await
+        let mut renderer = Renderer::from(MacroquadRenderer {});
+        renderer.render(test_create_element)?;
+        next_frame().await;
     }
+
+    // loop {
+    //     let mut ctx = AppCtx::new();
+    //     ctx.add_font("Futura".to_owned(), font.clone());
+    //
+    //     renderer.setup(&mut ctx);
+    //
+    //     let ctx = create_element(&mut ctx)?;
+    //
+    //     let layout = calculate_layout(ctx.try_into()?)?;
+    //
+    //     renderer.draw_root(layout);
+    //
+    //     next_frame().await
+    // }
 }

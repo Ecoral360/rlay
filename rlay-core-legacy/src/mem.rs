@@ -49,10 +49,6 @@ where
         Self { arena: vec![] }
     }
 
-    pub fn clear(&mut self) {
-        self.arena.clear();
-    }
-
     pub fn len(&self) -> usize {
         self.arena.len()
     }

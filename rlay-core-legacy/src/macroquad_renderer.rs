@@ -37,7 +37,7 @@ impl Render for MacroquadRenderer {
             ..Default::default()
         }));
 
-        ctx.open_element(screen_root);
+        ctx.set_root(screen_root);
     }
 
     fn draw_root(&mut self, root: ElementLayout<Done>) {

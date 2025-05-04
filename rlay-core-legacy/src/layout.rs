@@ -234,171 +234,143 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
     type NextStep = FitSizingHeight;
 
     fn apply_layout_step(self) -> Result<ElementLayout<Self::NextStep>, RlayError> {
-        let mut old_children = self.children;
-        let children;
+        let mut children = self.children;
 
         if let Element::Container(ref container) = self.element {
             let config = container.config();
             let children_width = config.layout_direction.value_on_axis(
-                old_children
+                children
                     .iter()
                     .map(|child| child.dimensions.width)
                     .sum::<f32>()
-                    + ((old_children.len().max(1) - 1) as i32 * config.child_gap) as f32,
+                    + ((children.len().max(1) - 1) as i32 * config.child_gap) as f32,
                 0.0,
             );
 
             let mut remaining_width =
                 self.dimensions.width - children_width - config.padding.x() as f32;
 
-            if let LayoutDirection::TopToBottom = config.layout_direction {
-                children = old_children
-                    .into_iter()
-                    .map(|mut child| {
-                        if let Element::Container(ContainerElement {
-                            config:
-                                ElementConfig {
-                                    sizing:
-                                        Sizing {
-                                            width: SizingAxis::Grow(min_max),
-                                            ..
-                                        },
+            let mut children_grow = children
+                .iter_mut()
+                .filter(|child| {
+                    matches!(
+                        child.data(),
+                        Element::Container(ContainerElement {
+                            config: ElementConfig {
+                                sizing: Sizing {
+                                    width: SizingAxis::Grow(..),
                                     ..
                                 },
-                        }) = child.data()
-                        {
-                            child.dimensions.width = remaining_width;
-                        }
-                        child.apply_layout_step()
-                    })
-                    .collect::<Result<Box<[_]>, _>>()?;
-            } else {
-                let mut children_grow = old_children
-                    .iter_mut()
-                    .filter(|child| {
-                        matches!(
-                            child.data(),
-                            Element::Container(ContainerElement {
-                                config: ElementConfig {
-                                    sizing: Sizing {
-                                        width: SizingAxis::Grow(..),
-                                        ..
-                                    },
-                                    ..
-                                }
-                            })
-                        )
-                    })
-                    .collect::<Vec<_>>();
-
-                while remaining_width > 0.0 && !children_grow.is_empty() {
-                    let mut smallest = children_grow[0].dimensions.width;
-                    let mut second_smallest = f32::INFINITY;
-                    let mut width_to_add = remaining_width;
-
-                    for child in children_grow.iter() {
-                        if child.dimensions.width < smallest {
-                            second_smallest = smallest;
-                            smallest = child.dimensions.width;
-                        } else if child.dimensions.width > smallest {
-                            second_smallest = second_smallest.min(child.dimensions.width);
-                            width_to_add = second_smallest - smallest;
-                        }
-                    }
-
-                    width_to_add = width_to_add.min(remaining_width / children_grow.len() as f32);
-                    if width_to_add == 0.0 {
-                        break;
-                    }
-
-                    let mut child_rem_idx = vec![];
-
-                    for (i, child) in children_grow.iter_mut().enumerate() {
-                        let Element::Container(ref container) = child.element else {
-                            continue;
-                        };
-                        let config = container.config();
-                        let max = config.sizing.width.get_max();
-                        let min = config.sizing.width.get_min();
-
-                        if child.dimensions.width == smallest {
-                            if child.dimensions.width + width_to_add > max {
-                                remaining_width -= max - child.dimensions.width;
-                                child.dimensions.width = max;
-                                child_rem_idx.push(i);
-                            } else {
-                                child.dimensions.width += width_to_add;
-                                remaining_width -= width_to_add;
+                                ..
                             }
-                        }
-                    }
+                        })
+                    )
+                })
+                .collect::<Vec<_>>();
 
-                    children_grow = children_grow
-                        .into_iter()
-                        .enumerate()
-                        .filter_map(|(i, child)| child_rem_idx.contains(&i).not().then_some(child))
-                        .collect();
+            while remaining_width > 0.0 && !children_grow.is_empty() {
+                let mut smallest = children_grow[0].dimensions.width;
+                let mut second_smallest = f32::INFINITY;
+                let mut width_to_add = remaining_width;
+
+                for child in children_grow.iter() {
+                    if child.dimensions.width < smallest {
+                        second_smallest = smallest;
+                        smallest = child.dimensions.width;
+                    } else if child.dimensions.width > smallest {
+                        second_smallest = second_smallest.min(child.dimensions.width);
+                        width_to_add = second_smallest - smallest;
+                    }
                 }
 
-                // let mut children_grow = children
-                //     .iter_mut()
-                //     .filter(|child| matches!(child.layout_config().sizing.width, SizingAxis::Grow(..)))
-                //     .collect::<Vec<_>>();
+                width_to_add = width_to_add.min(remaining_width / children_grow.len() as f32);
+                if width_to_add == 0.0 {
+                    break;
+                }
 
-                // while remaining_width < 0.0 && !children_grow.is_empty() {
-                //     let mut largest = children_grow[0].dimensions.width;
-                //     let mut second_largest = 0.0;
-                //     let mut width_to_rem = remaining_width;
-                //
-                //     for child in children_grow.iter() {
-                //         if child.dimensions.width > largest {
-                //             second_largest = largest;
-                //             largest = child.dimensions.width;
-                //         } else if child.dimensions.width < largest {
-                //             second_largest = second_largest.max(child.dimensions.width);
-                //             width_to_rem = second_largest - largest;
-                //         }
-                //     }
-                //
-                //     width_to_rem = width_to_rem.max(remaining_width / children_grow.len() as f32);
-                //     if width_to_rem == 0.0 {
-                //         break;
-                //     }
-                //
-                //     let mut child_rem_idx = vec![];
-                //
-                //     for (i, child) in children_grow.iter_mut().enumerate() {
-                //         let min = child.config.sizing.width.get_min();
-                //
-                //         if child.dimensions.width == largest {
-                //             if child.dimensions.width - width_to_rem < min {
-                //                 remaining_width += child.dimensions.width - min;
-                //                 child.dimensions.width = min;
-                //                 child_rem_idx.push(i);
-                //             } else {
-                //                 child.dimensions.width -= width_to_rem;
-                //                 remaining_width += width_to_rem;
-                //             }
-                //         }
-                //     }
-                //
-                //     children_grow = children_grow
-                //         .into_iter()
-                //         .enumerate()
-                //         .filter_map(|(i, child)| child_rem_idx.contains(&i).not().then_some(child))
-                //         .collect();
-                // }
-                children = old_children
+                let mut child_rem_idx = vec![];
+
+                for (i, child) in children_grow.iter_mut().enumerate() {
+                    let Element::Container(ref container) = child.element else {
+                        continue;
+                    };
+                    let config = container.config();
+                    let max = config.sizing.width.get_max();
+                    let min = config.sizing.width.get_min();
+
+                    if child.dimensions.width == smallest {
+                        if child.dimensions.width + width_to_add > max {
+                            remaining_width -= max - child.dimensions.width;
+                            child.dimensions.width = max;
+                            child_rem_idx.push(i);
+                        } else {
+                            child.dimensions.width += width_to_add;
+                            remaining_width -= width_to_add;
+                        }
+                    }
+                }
+
+                children_grow = children_grow
                     .into_iter()
-                    .map(|mut child| child.apply_layout_step())
-                    .collect::<Result<Box<[_]>, _>>()?;
+                    .enumerate()
+                    .filter_map(|(i, child)| child_rem_idx.contains(&i).not().then_some(child))
+                    .collect();
             }
-        } else {
-            children = old_children
-                .into_iter()
-                .map(|mut child| child.apply_layout_step())
-                .collect::<Result<Box<[_]>, _>>()?;
+
+            // let mut children_grow = children
+            //     .iter_mut()
+            //     .filter(|child| matches!(child.layout_config().sizing.width, SizingAxis::Grow(..)))
+            //     .collect::<Vec<_>>();
+
+            // while remaining_width < 0.0 && !children_grow.is_empty() {
+            //     let mut largest = children_grow[0].dimensions.width;
+            //     let mut second_largest = 0.0;
+            //     let mut width_to_rem = remaining_width;
+            //
+            //     for child in children_grow.iter() {
+            //         if child.dimensions.width > largest {
+            //             second_largest = largest;
+            //             largest = child.dimensions.width;
+            //         } else if child.dimensions.width < largest {
+            //             second_largest = second_largest.max(child.dimensions.width);
+            //             width_to_rem = second_largest - largest;
+            //         }
+            //     }
+            //
+            //     width_to_rem = width_to_rem.max(remaining_width / children_grow.len() as f32);
+            //     if width_to_rem == 0.0 {
+            //         break;
+            //     }
+            //
+            //     let mut child_rem_idx = vec![];
+            //
+            //     for (i, child) in children_grow.iter_mut().enumerate() {
+            //         let min = child.config.sizing.width.get_min();
+            //
+            //         if child.dimensions.width == largest {
+            //             if child.dimensions.width - width_to_rem < min {
+            //                 remaining_width += child.dimensions.width - min;
+            //                 child.dimensions.width = min;
+            //                 child_rem_idx.push(i);
+            //             } else {
+            //                 child.dimensions.width -= width_to_rem;
+            //                 remaining_width += width_to_rem;
+            //             }
+            //         }
+            //     }
+            //
+            //     children_grow = children_grow
+            //         .into_iter()
+            //         .enumerate()
+            //         .filter_map(|(i, child)| child_rem_idx.contains(&i).not().then_some(child))
+            //         .collect();
+            // }
         }
+
+        let children = children
+            .into_iter()
+            .map(|mut child| child.apply_layout_step())
+            .collect::<Result<Box<[_]>, _>>()?;
 
         Ok(ElementLayout {
             _marker: PhantomData,
@@ -474,7 +446,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
     type NextStep = Positions;
 
     fn apply_layout_step(self) -> Result<ElementLayout<Self::NextStep>, RlayError> {
-        let mut old_children = self.children;
+        let old_children = self.children;
         let children;
 
         if let Element::Container(ref container) = self.element {
@@ -488,102 +460,29 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
                     + ((old_children.len().max(1) - 1) as i32 * config.child_gap) as f32,
             );
 
-            let mut remaining_height =
+            let remaining_height =
                 self.dimensions.height - children_height - config.padding.y() as f32;
 
-            if let LayoutDirection::LeftToRight = config.layout_direction {
-                children = old_children
-                    .into_iter()
-                    .map(|mut child| {
-                        if let Element::Container(ContainerElement {
-                            config:
-                                ElementConfig {
-                                    sizing:
-                                        Sizing {
-                                            height: SizingAxis::Grow(min_max),
-                                            ..
-                                        },
-                                    ..
-                                },
-                        }) = child.data()
-                        {
-                            child.dimensions.height = remaining_height;
-                        }
-                        child.apply_layout_step()
-                    })
-                    .collect::<Result<Box<[_]>, _>>()?;
-            } else {
-                let mut children_grow = old_children
-                    .iter_mut()
-                    .filter(|child| {
-                        matches!(
-                            child.data(),
-                            Element::Container(ContainerElement {
-                                config: ElementConfig {
-                                    sizing: Sizing {
-                                        height: SizingAxis::Grow(..),
+            children = old_children
+                .into_iter()
+                .map(|mut child| {
+                    if let Element::Container(ContainerElement {
+                        config:
+                            ElementConfig {
+                                sizing:
+                                    Sizing {
+                                        width: SizingAxis::Grow(min_max),
                                         ..
                                     },
-                                    ..
-                                }
-                            })
-                        )
-                    })
-                    .collect::<Vec<_>>();
-                while remaining_height > 0.0 && !children_grow.is_empty() {
-                    let mut smallest = children_grow[0].dimensions.height;
-                    let mut second_smallest = f32::INFINITY;
-                    let mut height_to_add = remaining_height;
-
-                    for child in children_grow.iter() {
-                        if child.dimensions.height < smallest {
-                            second_smallest = smallest;
-                            smallest = child.dimensions.height;
-                        } else if child.dimensions.height > smallest {
-                            second_smallest = second_smallest.min(child.dimensions.height);
-                            height_to_add = second_smallest - smallest;
-                        }
+                                ..
+                            },
+                    }) = child.data()
+                    {
+                        child.dimensions.height = remaining_height;
                     }
-
-                    height_to_add =
-                        height_to_add.min(remaining_height / children_grow.len() as f32);
-                    if height_to_add == 0.0 {
-                        break;
-                    }
-
-                    let mut child_rem_idx = vec![];
-
-                    for (i, child) in children_grow.iter_mut().enumerate() {
-                        let Element::Container(ref container) = child.element else {
-                            continue;
-                        };
-                        let config = container.config();
-                        let max = config.sizing.height.get_max();
-                        let min = config.sizing.height.get_min();
-
-                        if child.dimensions.height == smallest {
-                            if child.dimensions.height + height_to_add > max {
-                                remaining_height -= max - child.dimensions.height;
-                                child.dimensions.height = max;
-                                child_rem_idx.push(i);
-                            } else {
-                                child.dimensions.height += height_to_add;
-                                remaining_height -= height_to_add;
-                            }
-                        }
-                    }
-
-                    children_grow = children_grow
-                        .into_iter()
-                        .enumerate()
-                        .filter_map(|(i, child)| child_rem_idx.contains(&i).not().then_some(child))
-                        .collect();
-                }
-                children = old_children
-                    .into_iter()
-                    .map(|mut child| child.apply_layout_step())
-                    .collect::<Result<Box<[_]>, _>>()?;
-            }
+                    child.apply_layout_step()
+                })
+                .collect::<Result<Box<[_]>, _>>()?;
         } else {
             children = old_children
                 .into_iter()

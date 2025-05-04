@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use crate::{
     AppCtx, ContainerElement, Dimension2D, Done, ElementLayout, ImageElement, TextElement,
-    Vector2D, app_ctx, calculate_layout, err::RlayError,
+    Vector2D, app_ctx, err::RlayError,
 };
 mod commands;
 
@@ -49,33 +49,26 @@ impl<'a, R: Render> From<R> for Renderer<'a, R> {
 }
 
 pub trait RootFactory<'a> {
-    fn apply(&self, ctx: &'a mut AppCtx) -> Result<&'a mut AppCtx, RlayError>;
+    fn apply(&self, ctx: &'a mut AppCtx) -> Result<(), RlayError>;
 }
 
-impl<'a, F> RootFactory<'a> for F
-where
-    F: Fn(&'a mut AppCtx) -> Result<&'a mut AppCtx, RlayError>,
-{
-    fn apply(&self, ctx: &'a mut AppCtx) -> Result<&'a mut AppCtx, RlayError> {
+impl<'a> RootFactory<'a> for fn(&'a mut AppCtx) {
+    fn apply(&self, ctx: &'a mut AppCtx) -> Result<(), RlayError> {
+        (self)(ctx);
+        Ok(())
+    }
+}
+
+impl<'a> RootFactory<'a> for fn(&'a mut AppCtx) -> Result<(), RlayError> {
+    fn apply(&self, ctx: &'a mut AppCtx) -> Result<(), RlayError> {
         (self)(ctx)
     }
 }
 
 impl<'a, R: Render> Renderer<'a, R> {
     pub fn render(&'a mut self, root_factory: impl RootFactory<'a>) -> Result<(), RlayError> {
-        self.app_ctx.clear();
-
-        let ctx = &mut self.app_ctx;
-
-        self.renderer.setup(ctx);
-
-        let ctx = root_factory.apply(ctx)?;
-
-        ctx.close_element();
-
-        let layout = calculate_layout(ctx.try_into()?)?;
-
-        self.renderer.draw_root(layout);
+        let mut app_ctx = AppCtx::new();
+        let _ = root_factory.apply(&mut self.app_ctx)?;
 
         Ok(())
     }

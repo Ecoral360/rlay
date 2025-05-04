@@ -67,9 +67,6 @@ impl Sizing {
     }
 }
 
-#[allow(non_upper_case_globals)]
-pub const padding: Padding = Padding{left: 0, right: 0, top: 0, bottom: 0};
-
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct Padding {
     pub left: i32,

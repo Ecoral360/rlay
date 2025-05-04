@@ -6,11 +6,11 @@ pub use layout::*;
 pub use render::*;
 
 mod app_ctx;
-pub mod elements;
 pub mod err;
 mod layout;
 mod mem;
 mod render;
+pub mod elements;
 
 #[cfg(feature = "macroquad")]
 pub mod macroquad_renderer;
@@ -19,83 +19,7 @@ pub mod macroquad_renderer;
 pub mod raylib_renderer;
 
 #[macro_export]
-macro_rules! rlay_define {
-    ($(fn $fn_name:ident ($ctx:ident $(, $param:ident : $param_type:ty)* $(,)?) {$($stmts:stmt)*})*) => {
-        $(
-        fn $fn_name($ctx: &mut $crate::AppCtx $(, $param: $param_type)*) -> Result<&mut $crate::AppCtx, $crate::err::RlayError> {
-            {
-                $($stmts)*
-            }
-            return Ok($ctx);
-        })*
-    };
-}
-
-#[macro_export]
 macro_rules! rlay {
-    ($ctx:ident, view($($config:tt)*)) => {{
-        #[allow(clippy::needless_update)]
-        {
-            let config = {
-                let mut config = $crate::ElementConfig::default();
-                $crate::_rlay!(config; $($config)*);
-                config
-            };
-
-            $ctx.open_element(
-                $crate::Element::Container($crate::elements::ContainerElement::new(config))
-            );
-        }
-        {
-            $ctx.close_element();
-        }
-    }};
-    ($ctx:ident, view($($config:tt)*) $child:block) => {{
-        #[allow(clippy::needless_update)]
-        {
-            let config = {
-                let mut config = $crate::ElementConfig::default();
-                $crate::_rlay!(config; $($config)*);
-                config
-            };
-
-            $ctx.open_element(
-                $crate::Element::Container($crate::elements::ContainerElement::new(config))
-            );
-        }
-        {
-            $child
-        }
-        {
-            $ctx.close_element();
-        }
-        }};
-
-    ($ctx:ident, text($text:expr $(, $($config:tt)*)?)) => {{
-        #[allow(clippy::needless_update)]
-        {
-            let text_config = {
-                let mut config = $crate::TextConfig::default();
-                $crate::_rlay!(config; $($($config)*)?);
-                config
-            };
-
-            $ctx.open_element(
-                $crate::Element::Text(
-                    $crate::elements::TextElement::new(
-                        text_config,
-                        $text.to_string(),
-                    ))
-            );
-        }
-        {
-            $ctx.close_element();
-        }
-    }};
-}
-
-#[macro_export]
-macro_rules! view {
     ($ctx:ident, {$($config:tt)*}) => {{
         #[allow(clippy::needless_update)]
         {

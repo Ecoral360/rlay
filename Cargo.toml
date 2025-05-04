@@ -1,5 +1,5 @@
 [workspace]
-members = ["rlay-core", "rlay-macros"]
+members = ["rlay-core-legacy", "rlay-macros", "rlay-core"]
 
 [package]
 name = "rlay"
