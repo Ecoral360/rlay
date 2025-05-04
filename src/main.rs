@@ -7,7 +7,7 @@ use rlay_core::{
 };
 
 fn test_create_element(ctx: &mut AppCtx) -> Result<&mut AppCtx, RlayError> {
-    let x = sizing!(Fixed(150), Grow);
+    let x = sizing!(50%, Grow);
 
     rlay!(ctx, view(
             background_color = BLUE,

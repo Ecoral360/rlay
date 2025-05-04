@@ -105,13 +105,13 @@ fn unpack_node(
                 SizingAxis::Fixed(w) => w,
                 SizingAxis::Fit(MinMax { min, .. }) => min.unwrap_or(0.0),
                 SizingAxis::Grow(MinMax { min, .. }) => min.unwrap_or(0.0),
-                SizingAxis::Percent(_) => todo!(),
+                SizingAxis::Percent(_) => 0.0,
             };
             let height = match height {
                 SizingAxis::Fixed(h) => h,
                 SizingAxis::Fit(MinMax { min, .. }) => min.unwrap_or(0.0),
                 SizingAxis::Grow(MinMax { min, .. }) => min.unwrap_or(0.0),
-                SizingAxis::Percent(_) => todo!(),
+                SizingAxis::Percent(_) => 0.0,
             };
 
             let idx = arena.find(&node).ok_or(RlayError::ElementNotFound)?;

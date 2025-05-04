@@ -205,7 +205,7 @@ impl LayoutStep for ElementLayout<FitSizingWidth> {
                         .map(|child| child.dimensions.width)
                         .reduce(f32::max)
                         .unwrap_or_default(),
-                ) + config.padding.x() as f32;
+                ) + config.padding.val_x() as f32;
 
                 let parent_dimension =
                     (self.dimensions + Dimension2D::new(width, 0.0)).clamped_width(min_max);
@@ -237,8 +237,30 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
         let mut old_children = self.children;
         let children;
 
+        old_children = old_children
+            .into_iter()
+            .map(|mut child| {
+                if let Element::Container(ContainerElement {
+                    config:
+                        ElementConfig {
+                            sizing:
+                                Sizing {
+                                    width: SizingAxis::Percent(val),
+                                    ..
+                                },
+                            ..
+                        },
+                }) = child.data()
+                {
+                    child.dimensions.width = self.dimensions.width * *val;
+                }
+                child
+            })
+            .collect::<Box<[_]>>();
+
         if let Element::Container(ref container) = self.element {
             let config = container.config();
+
             let children_width = config.layout_direction.value_on_axis(
                 old_children
                     .iter()
@@ -249,7 +271,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
             );
 
             let mut remaining_width =
-                self.dimensions.width - children_width - config.padding.x() as f32;
+                self.dimensions.width - children_width - config.padding.val_x() as f32;
 
             if let LayoutDirection::TopToBottom = config.layout_direction {
                 children = old_children
@@ -340,54 +362,6 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
                         .collect();
                 }
 
-                // let mut children_grow = children
-                //     .iter_mut()
-                //     .filter(|child| matches!(child.layout_config().sizing.width, SizingAxis::Grow(..)))
-                //     .collect::<Vec<_>>();
-
-                // while remaining_width < 0.0 && !children_grow.is_empty() {
-                //     let mut largest = children_grow[0].dimensions.width;
-                //     let mut second_largest = 0.0;
-                //     let mut width_to_rem = remaining_width;
-                //
-                //     for child in children_grow.iter() {
-                //         if child.dimensions.width > largest {
-                //             second_largest = largest;
-                //             largest = child.dimensions.width;
-                //         } else if child.dimensions.width < largest {
-                //             second_largest = second_largest.max(child.dimensions.width);
-                //             width_to_rem = second_largest - largest;
-                //         }
-                //     }
-                //
-                //     width_to_rem = width_to_rem.max(remaining_width / children_grow.len() as f32);
-                //     if width_to_rem == 0.0 {
-                //         break;
-                //     }
-                //
-                //     let mut child_rem_idx = vec![];
-                //
-                //     for (i, child) in children_grow.iter_mut().enumerate() {
-                //         let min = child.config.sizing.width.get_min();
-                //
-                //         if child.dimensions.width == largest {
-                //             if child.dimensions.width - width_to_rem < min {
-                //                 remaining_width += child.dimensions.width - min;
-                //                 child.dimensions.width = min;
-                //                 child_rem_idx.push(i);
-                //             } else {
-                //                 child.dimensions.width -= width_to_rem;
-                //                 remaining_width += width_to_rem;
-                //             }
-                //         }
-                //     }
-                //
-                //     children_grow = children_grow
-                //         .into_iter()
-                //         .enumerate()
-                //         .filter_map(|(i, child)| child_rem_idx.contains(&i).not().then_some(child))
-                //         .collect();
-                // }
                 children = old_children
                     .into_iter()
                     .map(|mut child| child.apply_layout_step())
@@ -445,7 +419,7 @@ impl LayoutStep for ElementLayout<FitSizingHeight> {
                         .map(|child| child.dimensions.height)
                         .sum::<f32>()
                         + ((children.len().max(1) - 1) as i32 * config.child_gap) as f32,
-                ) + config.padding.y() as f32;
+                ) + config.padding.val_y() as f32;
 
                 let parent_dimension =
                     (self.dimensions + Dimension2D::new(0.0, height)).clamped_height(min_max);
@@ -477,8 +451,30 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
         let mut old_children = self.children;
         let children;
 
+        old_children = old_children
+            .into_iter()
+            .map(|mut child| {
+                if let Element::Container(ContainerElement {
+                    config:
+                        ElementConfig {
+                            sizing:
+                                Sizing {
+                                    height: SizingAxis::Percent(val),
+                                    ..
+                                },
+                            ..
+                        },
+                }) = child.data()
+                {
+                    child.dimensions.height = self.dimensions.height * *val;
+                }
+                child
+            })
+            .collect::<Box<[_]>>();
+
         if let Element::Container(ref container) = self.element {
             let config = container.config();
+
             let children_height = config.layout_direction.value_on_axis(
                 0.0,
                 old_children
@@ -489,7 +485,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
             );
 
             let mut remaining_height =
-                self.dimensions.height - children_height - config.padding.y() as f32;
+                self.dimensions.height - children_height - config.padding.val_y() as f32;
 
             if let LayoutDirection::LeftToRight = config.layout_direction {
                 children = old_children

@@ -231,6 +231,14 @@ macro_rules! _sizing_axis {
             $crate::SizingAxis::Percent(val)
         }
     };
+
+    ($val:literal%) => {
+        {
+            let val = $val as f32 / 100.0;
+            assert!(val >= 0.0 && val <= 1.0, "Percent value must be between 0 and 1, got {}", val);
+            $crate::SizingAxis::Percent(val)
+        }
+    };
 }
 
 #[macro_export]
@@ -249,6 +257,13 @@ macro_rules! sizing {
     ($type:ident ($val:expr) $(, $($($h:tt)+)?)?) => {
         $crate::Sizing {
             width: $crate::_sizing_axis!($type ($val)),
+            height: $crate::_sizing_axis!($($($($h)+)?)?)
+        }
+    };
+
+    ($val:literal% $(, $($($h:tt)+)?)?) => {
+        $crate::Sizing {
+            width: $crate::_sizing_axis!($val%),
             height: $crate::_sizing_axis!($($($($h)+)?)?)
         }
     };

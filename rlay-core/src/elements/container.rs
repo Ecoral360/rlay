@@ -107,18 +107,26 @@ impl Padding {
         }
     }
 
-    pub const fn x(&self) -> i32 {
+    pub fn x(self, val: i32) -> Self {
+        Self { left: val, right: val, ..self }
+    }
+
+    pub fn y(self, val: i32) -> Self {
+        Self { top: val, bottom: val, ..self }
+    }
+
+    pub const fn val_x(&self) -> i32 {
         self.left + self.right
     }
 
-    pub const fn y(&self) -> i32 {
+    pub const fn val_y(&self) -> i32 {
         self.top + self.bottom
     }
 
     pub const fn as_dimensions(&self) -> Dimension2D {
         Dimension2D {
-            width: self.x() as f32,
-            height: self.y() as f32,
+            width: self.val_x() as f32,
+            height: self.val_y() as f32,
         }
     }
 }
