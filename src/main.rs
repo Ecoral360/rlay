@@ -17,7 +17,7 @@ fn test_create_element(ctx: &mut AppCtx) -> Result<&mut AppCtx, RlayError> {
             align = {},
           )
         {
-            rlay!(ctx, view(
+            rlay!(ctx, view[id="pink-box"](
                 background_color = PINK,
                 sizing = x,
             ));

@@ -14,6 +14,7 @@ use crate::{
     mem::{ArenaElement, ArenaTree, ElementNode, MemError},
 };
 
+#[derive(Default)]
 pub struct AppCtx {
     parent_stack: Vec<usize>,
     elements: ArenaElement,
@@ -29,7 +30,17 @@ impl AppCtx {
         }
     }
 
-    pub fn clear(&mut self) {
+    pub fn current_element(&self) -> Result<&Element, RlayError> {
+        let current_idx = self
+            .parent_stack
+            .first()
+            .ok_or(RlayError::ElementNotFound)?;
+        self.elements()
+            .get_val(*current_idx)
+            .ok_or(RlayError::ElementNotFound)
+    }
+
+    pub(crate) fn clear(&mut self) {
         self.parent_stack.clear();
         self.elements.clear();
         self.fonts.clear();
@@ -80,13 +91,13 @@ impl TryFrom<&mut AppCtx> for ElementLayout<Initial> {
     type Error = RlayError;
 
     fn try_from(value: &mut AppCtx) -> Result<Self, Self::Error> {
-        let root = *value.parent_stack.get(0).ok_or(RlayError::NoRoot)?;
+        let root = *value.parent_stack.first().ok_or(RlayError::NoRoot)?;
         let root_value = value
             .elements
             .get_val(root)
             .ok_or(RlayError::ElementNotFound)?;
 
-        unpack_node(&value, &value.elements, root_value.clone())
+        unpack_node(value, &value.elements, root_value.clone())
     }
 }
 
@@ -96,7 +107,6 @@ fn unpack_node(
     node: Element,
 ) -> Result<ElementLayout<Initial>, RlayError> {
     match node {
-
         Element::Container(ref container) => {
             let config = container.config();
             let Sizing { width, height } = config.sizing;
@@ -142,8 +152,7 @@ fn unpack_node(
                 config
                     .font_name
                     .as_ref()
-                    .map(|name| ctx.fonts.get(name))
-                    .flatten(),
+                    .and_then(|name| ctx.fonts.get(name)),
                 config.font_size,
                 1.0,
             );

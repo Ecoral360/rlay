@@ -56,6 +56,7 @@ impl Default for TextConfig {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TextElement {
+    pub id: Option<String>,
     pub config: TextConfig,
     pub data: String,
 }
@@ -67,8 +68,8 @@ pub struct TextDimensions {
 }
 
 impl TextElement {
-    pub fn new(config: TextConfig, data: String) -> Self {
-        Self { config, data }
+    pub fn new(config: TextConfig, data: String, id: Option<String>) -> Self {
+        Self { config, data, id }
     }
 
     pub fn config(&self) -> &TextConfig {
@@ -116,6 +117,10 @@ impl TextElement {
         //     offset_y: max_y / dpi_scaling,
         // }
         todo!()
+    }
+
+    pub fn id(&self) -> Option<&String> {
+        self.id.as_ref()
     }
 }
 

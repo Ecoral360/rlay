@@ -43,7 +43,24 @@ macro_rules! rlay {
             };
 
             $ctx.open_element(
-                $crate::Element::Container($crate::elements::ContainerElement::new(config))
+                $crate::Element::Container($crate::elements::ContainerElement::new(config, None))
+            );
+        }
+        {
+            $ctx.close_element();
+        }
+    }};
+    ($ctx:ident, view[id=$id:expr]($($config:tt)*)) => {{
+        #[allow(clippy::needless_update)]
+        {
+            let config = {
+                let mut config = $crate::ElementConfig::default();
+                $crate::_rlay!(config; $($config)*);
+                config
+            };
+
+            $ctx.open_element(
+                $crate::Element::Container($crate::elements::ContainerElement::new(config, Some($id.to_string())))
             );
         }
         {
@@ -60,7 +77,28 @@ macro_rules! rlay {
             };
 
             $ctx.open_element(
-                $crate::Element::Container($crate::elements::ContainerElement::new(config))
+                $crate::Element::Container($crate::elements::ContainerElement::new(config, None))
+            );
+        }
+        {
+            $child
+        }
+        {
+            $ctx.close_element();
+        }
+        }};
+
+    ($ctx:ident, view[id=$id:expr]($($config:tt)*) $child:block) => {{
+        #[allow(clippy::needless_update)]
+        {
+            let config = {
+                let mut config = $crate::ElementConfig::default();
+                $crate::_rlay!(config; $($config)*);
+                config
+            };
+
+            $ctx.open_element(
+                $crate::Element::Container($crate::elements::ContainerElement::new(config, Some($id.to_string())))
             );
         }
         {
@@ -85,6 +123,30 @@ macro_rules! rlay {
                     $crate::elements::TextElement::new(
                         text_config,
                         $text.to_string(),
+                        None,
+                    ))
+            );
+        }
+        {
+            $ctx.close_element();
+        }
+    }};
+
+    ($ctx:ident, text[id=$id:expr]($text:expr $(, $($config:tt)*)?)) => {{
+        #[allow(clippy::needless_update)]
+        {
+            let text_config = {
+                let mut config = $crate::TextConfig::default();
+                $crate::_rlay!(config; $($($config)*)?);
+                config
+            };
+
+            $ctx.open_element(
+                $crate::Element::Text(
+                    $crate::elements::TextElement::new(
+                        text_config,
+                        $text.to_string(),
+                        Some($id.to_string()),
                     ))
             );
         }

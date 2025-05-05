@@ -1,4 +1,4 @@
-use std::{usize, vec};
+use std::vec;
 use thiserror::Error;
 
 use crate::Element;
@@ -17,6 +17,14 @@ where
     T: PartialEq,
 {
     arena: Vec<Node<T>>,
+}
+
+impl<T: PartialEq> Default for ArenaTree<T> {
+    fn default() -> Self {
+        Self {
+            arena: Default::default(),
+        }
+    }
 }
 
 impl<T> ArenaTree<T>
@@ -173,3 +181,14 @@ where
 
 pub type ElementNode = Node<Element>;
 pub type ArenaElement = ArenaTree<Element>;
+
+impl ArenaElement {
+    pub fn get_element_with_id(&self, id: &str) -> Option<&Element> {
+        for el in self.arena.iter() {
+            if el.val.id().is_some_and(|el_id| el_id == id) {
+                return Some(&el.val)
+            }
+        }
+        None
+    }
+}

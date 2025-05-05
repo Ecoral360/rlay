@@ -64,15 +64,23 @@ pub enum Element {
 }
 
 impl Element {
-    pub fn container(config: ElementConfig) -> Self {
-        Self::Container(ContainerElement::new(config))
+    pub fn container(config: ElementConfig, id: Option<String>) -> Self {
+        Self::Container(ContainerElement::new(config, id))
     }
 
-    pub fn text(config: TextConfig, data: String) -> Self {
-        Self::Text(TextElement::new(config, data))
+    pub fn text(config: TextConfig, data: String, id: Option<String>) -> Self {
+        Self::Text(TextElement::new(config, data, id))
     }
 
-    pub fn image(config: TextConfig, data: String) -> Self {
-        Self::Text(TextElement::new(config, data))
+    pub fn image(config: TextConfig, data: String, id: Option<String>) -> Self {
+        Self::Text(TextElement::new(config, data, id))
+    }
+
+    pub fn id(&self) -> Option<&String> {
+        match self {
+            Element::Container(container_element) => container_element.id(),
+            Element::Text(text_element) => text_element.id(),
+            Element::Image(image_element) => image_element.id(),
+        }
     }
 }

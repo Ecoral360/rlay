@@ -265,6 +265,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
                                 },
                             ..
                         },
+                    ..
                 }) = child.data()
                 {
                     child.dimensions.width = self.dimensions.width * *val;
@@ -302,6 +303,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
                                         },
                                     ..
                                 },
+                            ..
                         }) = child.data()
                         {
                             child.dimensions.width = remaining_width;
@@ -322,7 +324,8 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
                                         ..
                                     },
                                     ..
-                                }
+                                },
+                                ..
                             })
                         )
                     })
@@ -479,6 +482,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
                                 },
                             ..
                         },
+                    ..
                 }) = child.data()
                 {
                     child.dimensions.height = self.dimensions.height * *val;
@@ -516,6 +520,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
                                         },
                                     ..
                                 },
+                            ..
                         }) = child.data()
                         {
                             child.dimensions.height = remaining_height;
@@ -536,7 +541,8 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
                                         ..
                                     },
                                     ..
-                                }
+                                },
+                                ..
                             })
                         )
                     })

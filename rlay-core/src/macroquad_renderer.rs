@@ -35,7 +35,7 @@ impl Render for MacroquadRenderer {
         let mut screen_root = Element::Container(ContainerElement::new(ElementConfig {
             sizing: sizing!(Fixed(screen_width()), Fixed(screen_height())),
             ..Default::default()
-        }));
+        }, None));
 
         ctx.open_element(screen_root);
     }

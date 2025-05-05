@@ -128,6 +128,15 @@ impl Padding {
         }
     }
 
+    pub fn all(self, val: i32) -> Self {
+        Self {
+            top: val,
+            bottom: val,
+            left: val,
+            right: val,
+        }
+    }
+
     pub const fn val_x(&self) -> i32 {
         self.left + self.right
     }
@@ -387,17 +396,24 @@ impl ElementConfig {
         }
     }
 }
+
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ContainerElement {
+    pub id: Option<String>,
     pub config: ElementConfig,
 }
 
 impl ContainerElement {
-    pub fn new(config: ElementConfig) -> Self {
-        Self { config }
+    pub fn new(config: ElementConfig, id: Option<String>) -> Self {
+        Self { config, id }
     }
 
     pub fn config(&self) -> &ElementConfig {
         &self.config
+    }
+
+    pub fn id(&self) -> Option<&String> {
+        self.id.as_ref()
     }
 }

@@ -9,15 +9,20 @@ pub struct ImageConfig {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ImageElement {
+    pub id: Option<String>,
     pub config: ImageConfig,
 }
 
 impl ImageElement {
-    pub fn new(config: ImageConfig) -> Self {
-        Self { config }
+    pub fn new(config: ImageConfig, id: Option<String>) -> Self {
+        Self { config, id }
     }
 
     pub fn config(&self) -> &ImageConfig {
         &self.config
+    }
+
+    pub fn id(&self) -> Option<&String> {
+        self.id.as_ref()
     }
 }
