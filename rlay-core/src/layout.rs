@@ -9,7 +9,8 @@ use std::{
 use macroquad::rand::rand;
 
 use crate::{
-    ContainerElement, Element, ElementConfig, LayoutDirection, MinMax, Sizing, SizingAxis,
+    Alignment, ContainerElement, Element, ElementConfig, LayoutAlignment, LayoutDirection, MinMax,
+    Sizing, SizingAxis,
     err::RlayError,
     mem::{ArenaElement, ElementNode},
 };
@@ -46,6 +47,14 @@ impl Add for Vector2D {
     }
 }
 
+impl Sub for Vector2D {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Vector2D::new(self.x - rhs.x, self.y - rhs.y)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Dimension2D {
     pub width: f32,
@@ -69,6 +78,12 @@ impl Dimension2D {
             width: self.width,
             height: min_max.clamp(self.height),
         }
+    }
+}
+
+impl From<Dimension2D> for Vector2D {
+    fn from(value: Dimension2D) -> Self {
+        Self::new(value.width, value.height)
     }
 }
 
@@ -610,7 +625,7 @@ impl LayoutStep for ElementLayout<Positions> {
                 offset: f32,
             }
 
-            let offset = config.padding_in_direction() as f32;
+            let offset = config.padding_in_axis() as f32;
 
             let mut step_ctx = StepCtx { offset };
 
@@ -620,11 +635,39 @@ impl LayoutStep for ElementLayout<Positions> {
                 .rev()
                 .scan(&mut step_ctx, |ctx, mut child| {
                     let offset = config.layout_direction.value_on_axis(
-                        Vector2D::new(ctx.offset, config.padding.top as f32),
-                        Vector2D::new(config.padding.left as f32, ctx.offset),
+                        Vector2D::new(ctx.offset, config.padding_in_other_axis() as f32),
+                        Vector2D::new(config.padding_in_other_axis() as f32, ctx.offset),
                     );
 
-                    child.position = child.position + parent_position + offset;
+                    match config.align.x {
+                        Alignment::Start => {
+                            child.position.x = (child.position + parent_position + offset).x;
+                        }
+                        Alignment::End => {
+                            child.position.x = (child.position + parent_position).x
+                                + self.dimensions.width
+                                - offset.x
+                                - child.dimensions.width;
+                        }
+                        Alignment::Center => {
+                            child.position.x = (child.position + parent_position + offset).x;
+                        }
+                    }
+
+                    match config.align.y {
+                        Alignment::Start => {
+                            child.position.y = (child.position + parent_position + offset).y;
+                        }
+                        Alignment::End => {
+                            child.position.y = (child.position + parent_position).y
+                                + self.dimensions.height
+                                - offset.y
+                                - child.dimensions.height;
+                        }
+                        Alignment::Center => {
+                            child.position.y = (child.position + parent_position + offset).y;
+                        }
+                    }
 
                     let layout = child.apply_layout_step();
                     let Ok(layout) = layout else {

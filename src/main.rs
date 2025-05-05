@@ -13,7 +13,8 @@ fn test_create_element(ctx: &mut AppCtx) -> Result<&mut AppCtx, RlayError> {
             background_color = BLUE,
             padding = [32, 32, 32, 32],
             child_gap = 32,
-            sizing = { Grow, Grow }
+            sizing = { Grow, Grow },
+            align = {},
           )
         {
             rlay!(ctx, view(

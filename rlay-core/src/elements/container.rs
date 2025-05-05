@@ -68,7 +68,12 @@ impl Sizing {
 }
 
 #[allow(non_upper_case_globals)]
-pub const padding: Padding = Padding{left: 0, right: 0, top: 0, bottom: 0};
+pub const padding: Padding = Padding {
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct Padding {
@@ -108,11 +113,19 @@ impl Padding {
     }
 
     pub fn x(self, val: i32) -> Self {
-        Self { left: val, right: val, ..self }
+        Self {
+            left: val,
+            right: val,
+            ..self
+        }
     }
 
     pub fn y(self, val: i32) -> Self {
-        Self { top: val, bottom: val, ..self }
+        Self {
+            top: val,
+            bottom: val,
+            ..self
+        }
     }
 
     pub const fn val_x(&self) -> i32 {
@@ -314,6 +327,20 @@ pub struct SharedConfig {
     pub corner_radius: CorderRadius,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub enum Alignment {
+    #[default]
+    Start,
+    End,
+    Center,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
+pub struct LayoutAlignment {
+    pub x: Alignment,
+    pub y: Alignment,
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct ElementConfig {
     pub sizing: Sizing,
@@ -321,6 +348,7 @@ pub struct ElementConfig {
     pub padding: Padding,
     pub layout_direction: LayoutDirection,
     pub child_gap: i32,
+    pub align: LayoutAlignment,
 
     pub border: Option<BorderConfig>,
     pub floating: Option<FloatingConfig>,
@@ -329,10 +357,33 @@ pub struct ElementConfig {
 }
 
 impl ElementConfig {
-    pub fn padding_in_direction(&self) -> i32 {
+    pub fn padding_in_axis(&self) -> i32 {
         match self.layout_direction {
-            LayoutDirection::LeftToRight => self.padding.left,
-            LayoutDirection::TopToBottom => self.padding.top,
+            LayoutDirection::LeftToRight => match self.align.x {
+                Alignment::Start => self.padding.left,
+                Alignment::End => self.padding.right,
+                Alignment::Center => self.padding.left,
+            },
+            LayoutDirection::TopToBottom => match self.align.y {
+                Alignment::Start => self.padding.top,
+                Alignment::End => self.padding.bottom,
+                Alignment::Center => self.padding.top,
+            },
+        }
+    }
+
+    pub fn padding_in_other_axis(&self) -> i32 {
+        match self.layout_direction {
+            LayoutDirection::TopToBottom => match self.align.x {
+                Alignment::Start => self.padding.left,
+                Alignment::End => self.padding.right,
+                Alignment::Center => self.padding.left,
+            },
+            LayoutDirection::LeftToRight => match self.align.y {
+                Alignment::Start => self.padding.top,
+                Alignment::End => self.padding.bottom,
+                Alignment::Center => self.padding.top,
+            },
         }
     }
 }

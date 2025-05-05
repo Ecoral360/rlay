@@ -185,12 +185,47 @@ macro_rules! _rlay_field {
         $crate::sizing!($($val)*)
     };
 
+    (align = {$($val:tt)*}) => {
+        $crate::align!($($val)*)
+    };
+
     (font_name = $val:expr) => {
         Some($val.into())
     };
 
     ($field:ident = $val:expr) => {
         $val.into()
+    };
+}
+
+#[macro_export]
+macro_rules! align {
+    () => {
+        $crate::LayoutAlignment::default()
+    };
+
+    ($align_x:ident $(, $align_y:ident)? $(,)?) => {
+        $crate::LayoutAlignment {
+            x: $crate::Alignment::$align_x,
+            $(y: $crate::Alignment::$align_y,)?
+            ..Default::default()
+        }
+    };
+
+    (x = $align:ident $(, $(y = $y:ident)?)?) => {
+        $crate::LayoutAlignment {
+            x: $crate::Alignment::$align,
+            $($(y: $crate::Alignment::$y,)?)?
+            ..Default::default()
+        }
+    };
+
+    (y = $align:ident $(, $(x = $x:ident)?)?) => {
+        $crate::LayoutAlignment {
+            y: $crate::Alignment::$align,
+            $($(x: $crate::Alignment::$x,)?)?
+            ..Default::default()
+        }
     };
 }
 
@@ -227,7 +262,7 @@ macro_rules! _sizing_axis {
     (Percent ($val:expr)) => {
         {
             let val = $val as f32;
-            assert!(val >= 0.0 && val <= 1.0, "Percent value must be between 0 and 1, got {}", val);
+            assert!((0.0..=1.0).contains(&val), "Percent value must be between 0 and 1, got {}", val);
             $crate::SizingAxis::Percent(val)
         }
     };
@@ -235,7 +270,7 @@ macro_rules! _sizing_axis {
     ($val:literal%) => {
         {
             let val = $val as f32 / 100.0;
-            assert!(val >= 0.0 && val <= 1.0, "Percent value must be between 0 and 1, got {}", val);
+            assert!((0.0..=1.0).contains(&val), "Percent value must be between 0 and 1, got {}", val);
             $crate::SizingAxis::Percent(val)
         }
     };
