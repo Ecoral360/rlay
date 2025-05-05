@@ -159,7 +159,7 @@ impl From<[i32; 4]> for Padding {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Color {
     /// Red value between 0.0 and 1.0
     pub r: f32,
@@ -169,6 +169,17 @@ pub struct Color {
     pub b: f32,
     /// Alpha value 0.0 to 1.0
     pub a: f32,
+}
+
+impl Default for Color {
+    fn default() -> Self {
+        Self {
+            r: Default::default(),
+            g: Default::default(),
+            b: Default::default(),
+            a: 1.0,
+        }
+    }
 }
 
 impl From<Color> for [f32; 4] {
@@ -259,10 +270,79 @@ impl LayoutDirection {
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct BorderWidth {
-    left: Option<f32>,
-    right: Option<f32>,
-    top: Option<f32>,
-    bottom: Option<f32>,
+    pub left: Option<f32>,
+    pub right: Option<f32>,
+    pub top: Option<f32>,
+    pub bottom: Option<f32>,
+}
+
+impl BorderWidth {
+    pub fn new(
+        left: Option<f32>,
+        right: Option<f32>,
+        top: Option<f32>,
+        bottom: Option<f32>,
+    ) -> Self {
+        Self {
+            left,
+            right,
+            top,
+            bottom,
+        }
+    }
+
+    pub fn left(self, val: f32) -> Self {
+        Self {
+            left: Some(val),
+            ..self
+        }
+    }
+
+    pub fn right(self, val: f32) -> Self {
+        Self {
+            right: Some(val),
+            ..self
+        }
+    }
+
+    pub fn top(self, val: f32) -> Self {
+        Self {
+            top: Some(val),
+            ..self
+        }
+    }
+
+    pub fn bottom(self, val: f32) -> Self {
+        Self {
+            bottom: Some(val),
+            ..self
+        }
+    }
+
+    pub fn x(self, val: f32) -> Self {
+        Self {
+            left: Some(val),
+            right: Some(val),
+            ..self
+        }
+    }
+
+    pub fn y(self, val: f32) -> Self {
+        Self {
+            top: Some(val),
+            bottom: Some(val),
+            ..self
+        }
+    }
+
+    pub fn all(self, val: f32) -> Self {
+        Self {
+            top: Some(val),
+            bottom: Some(val),
+            left: Some(val),
+            right: Some(val),
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -304,7 +384,7 @@ pub enum FloatingAttachTo {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum PointCaptureMode {
+pub enum PointerCaptureMode {
     #[default]
     Capture,
     Passthrough,
@@ -363,6 +443,7 @@ pub struct ElementConfig {
     pub floating: Option<FloatingConfig>,
     pub scroll: ScrollConfig,
     pub shared: Option<SharedConfig>,
+    pub pointer_capture: PointerCaptureMode,
 }
 
 impl ElementConfig {
@@ -396,7 +477,6 @@ impl ElementConfig {
         }
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ContainerElement {

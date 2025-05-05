@@ -1,8 +1,11 @@
-use std::marker::PhantomData;
+use std::{
+    marker::PhantomData,
+    sync::{Arc, Mutex},
+};
 
 use crate::{
-    AppCtx, ContainerElement, Dimension2D, Done, ElementLayout, ImageElement, TextElement,
-    Vector2D, app_ctx, calculate_layout, err::RlayError,
+    AppCtx, AppState, ContainerElement, Dimension2D, Done, ElementLayout, ImageElement,
+    TextElement, Vector2D, app_ctx, calculate_layout, err::RlayError,
 };
 mod commands;
 
@@ -16,6 +19,8 @@ pub trait Render {
     }
 
     fn setup(&mut self, ctx: &mut AppCtx);
+
+    fn update_input_state(&mut self, ctx: &mut AppCtx);
 
     fn draw_root(&mut self, root: ElementLayout<Done>);
     fn draw_element(&mut self, element: &ElementLayout<Done>);
@@ -38,16 +43,6 @@ pub struct Renderer<'a, R: Render> {
     renderer: R,
 }
 
-impl<'a, R: Render> From<R> for Renderer<'a, R> {
-    fn from(value: R) -> Self {
-        Self {
-            renderer: value,
-            phantom: PhantomData,
-            app_ctx: AppCtx::new(),
-        }
-    }
-}
-
 pub trait RootFactory<'a> {
     fn apply(&self, ctx: &'a mut AppCtx) -> Result<&'a mut AppCtx, RlayError>;
 }
@@ -62,6 +57,14 @@ where
 }
 
 impl<'a, R: Render> Renderer<'a, R> {
+    pub fn from(value: R, state: Arc<Mutex<AppState>>) -> Self {
+        Self {
+            renderer: value,
+            phantom: PhantomData,
+            app_ctx: AppCtx::new(state),
+        }
+    }
+
     pub fn render(&'a mut self, root_factory: impl RootFactory<'a>) -> Result<(), RlayError> {
         self.app_ctx.clear();
 
@@ -69,11 +72,15 @@ impl<'a, R: Render> Renderer<'a, R> {
 
         self.renderer.setup(ctx);
 
+        self.renderer.update_input_state(ctx);
+
         let ctx = root_factory.apply(ctx)?;
 
         ctx.close_element();
 
         let layout = calculate_layout(ctx.try_into()?)?;
+
+        ctx.update_hovered_elements(&layout);
 
         self.renderer.draw_root(layout);
 

@@ -9,10 +9,7 @@ use std::{
 use macroquad::rand::rand;
 
 use crate::{
-    Alignment, ContainerElement, Element, ElementConfig, LayoutAlignment, LayoutDirection, MinMax,
-    Sizing, SizingAxis,
-    err::RlayError,
-    mem::{ArenaElement, ElementNode},
+    app_ctx, err::RlayError, mem::{ArenaElement, ElementNode}, Alignment, AppCtx, ContainerElement, Element, ElementConfig, LayoutAlignment, LayoutDirection, MinMax, Sizing, SizingAxis
 };
 
 macro_rules! def_states {
@@ -52,6 +49,18 @@ impl Sub for Vector2D {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Vector2D::new(self.x - rhs.x, self.y - rhs.y)
+    }
+}
+
+impl From<(f32, f32)> for Vector2D {
+    fn from(value: (f32, f32)) -> Self {
+        Self::new(value.0, value.1)
+    }
+}
+
+impl From<[f32; 2]> for Vector2D {
+    fn from(value: [f32; 2]) -> Self {
+        Self::new(value[0], value[1])
     }
 }
 
@@ -713,4 +722,7 @@ pub fn calculate_layout(root: ElementLayout<Initial>) -> Result<ElementLayout<Do
         .apply_layout_step()?
         .apply_layout_step()?
         .apply_layout_step()
+}
+
+pub fn update_hovered_elements(ctx: &mut AppCtx, root: &ElementLayout<Done>) {
 }

@@ -2,6 +2,11 @@ use std::sync::{Arc, Mutex};
 
 use macroquad::{
     color::{BLACK, BLUE, Color, PINK, RED, YELLOW},
+    input::{
+        self, KeyCode, get_keys_down, get_keys_pressed, get_keys_released, is_key_down,
+        is_mouse_button_down, is_mouse_button_pressed, is_mouse_button_released,
+        mouse_delta_position, mouse_position,
+    },
     miniquad::window::screen_size,
     shapes::draw_rectangle,
     text::{draw_text, measure_text},
@@ -9,8 +14,8 @@ use macroquad::{
 };
 
 use crate::{
-    AppCtx, Color as RlayColor, ContainerElement, Done, Element, ElementConfig, ElementLayout,
-    Positions,
+    AppCtx, BorderWidth, Color as RlayColor, ContainerElement, Done, Element, ElementConfig,
+    ElementLayout, InputState, KeyboardInput, MouseButtonState, MouseInput, Positions,
     layout::{Dimension2D, Vector2D},
     render::Render,
     sizing,
@@ -32,10 +37,13 @@ pub struct MacroquadRenderer {}
 
 impl Render for MacroquadRenderer {
     fn setup(&mut self, ctx: &mut AppCtx) {
-        let mut screen_root = Element::Container(ContainerElement::new(ElementConfig {
-            sizing: sizing!(Fixed(screen_width()), Fixed(screen_height())),
-            ..Default::default()
-        }, None));
+        let mut screen_root = Element::Container(ContainerElement::new(
+            ElementConfig {
+                sizing: sizing!(Fixed(screen_width()), Fixed(screen_height())),
+                ..Default::default()
+            },
+            None,
+        ));
 
         ctx.open_element(screen_root);
     }
@@ -55,6 +63,22 @@ impl Render for MacroquadRenderer {
         match element.data() {
             Element::Container(container) => {
                 let bg_color = container.config().background_color.into();
+                if let Some(border) = container.config.border {
+                    let BorderWidth {
+                        left,
+                        right,
+                        top,
+                        bottom,
+                    } = border.width;
+
+                    draw_rectangle(
+                        x - left.unwrap_or_default(),
+                        y - top.unwrap_or_default(),
+                        width + left.unwrap_or_default() + right.unwrap_or_default(),
+                        height + top.unwrap_or_default() + bottom.unwrap_or_default(),
+                        border.color.into(),
+                    );
+                }
                 draw_rectangle(x, y, width, height, bg_color);
 
                 for child in element.children() {
@@ -74,5 +98,65 @@ impl Render for MacroquadRenderer {
             }
             Element::Image(image) => todo!(),
         }
+    }
+
+    fn update_input_state(&mut self, ctx: &mut AppCtx) {
+        ctx.set_input_state(InputState {
+            mouse: MouseInput {
+                mouse_position: mouse_position().into(),
+                mouse_delta: mouse_delta_position().to_array().into(),
+                left_button: {
+                    if is_mouse_button_released(input::MouseButton::Left) {
+                        MouseButtonState::Released
+                    } else if is_mouse_button_pressed(input::MouseButton::Left) {
+                        MouseButtonState::Pressed
+                    } else if is_mouse_button_down(input::MouseButton::Left) {
+                        MouseButtonState::Down
+                    } else {
+                        MouseButtonState::Up
+                    }
+                },
+                right_button: {
+                    if is_mouse_button_released(input::MouseButton::Right) {
+                        MouseButtonState::Released
+                    } else if is_mouse_button_pressed(input::MouseButton::Right) {
+                        MouseButtonState::Pressed
+                    } else if is_mouse_button_down(input::MouseButton::Right) {
+                        MouseButtonState::Down
+                    } else {
+                        MouseButtonState::Up
+                    }
+                },
+                middle_button: {
+                    if is_mouse_button_released(input::MouseButton::Middle) {
+                        MouseButtonState::Released
+                    } else if is_mouse_button_pressed(input::MouseButton::Middle) {
+                        MouseButtonState::Pressed
+                    } else if is_mouse_button_down(input::MouseButton::Middle) {
+                        MouseButtonState::Down
+                    } else {
+                        MouseButtonState::Up
+                    }
+                },
+            },
+            keyboard: KeyboardInput {
+                keys_down: get_keys_down()
+                    .into_iter()
+                    .map(|code| code as u16)
+                    .collect(),
+                keys_released: get_keys_released()
+                    .into_iter()
+                    .map(|code| code as u16)
+                    .collect(),
+                keys_pressed: get_keys_pressed()
+                    .into_iter()
+                    .map(|code| code as u16)
+                    .collect(),
+                shift_down: is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift),
+                ctrl_down: is_key_down(KeyCode::LeftControl) || is_key_down(KeyCode::RightControl),
+                alt_down: is_key_down(KeyCode::LeftAlt) || is_key_down(KeyCode::RightAlt),
+                super_down: is_key_down(KeyCode::LeftSuper) || is_key_down(KeyCode::RightSuper),
+            },
+        });
     }
 }

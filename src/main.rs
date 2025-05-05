@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use macroquad::{text::load_ttf_font, window::next_frame};
 use rlay_core::{
     AppCtx, Padding, Render, calculate_layout,
@@ -27,7 +29,7 @@ fn test_create_element(ctx: &mut AppCtx) -> Result<&mut AppCtx, RlayError> {
                 sizing = {Grow(20.0 .. 200.0), Grow}
             ));
 
-            rlay!(ctx, 
+            rlay!(ctx,
                 view(
                     background_color = ORANGE,
                     sizing = {Grow, Grow},
@@ -66,7 +68,7 @@ fn main() -> Result<(), RlayError> {
 #[cfg(feature = "macroquad")]
 #[macroquad::main("")]
 async fn main() -> Result<(), RlayError> {
-    use rlay_core::{Renderer, RootFactory, macroquad_renderer::MacroquadRenderer};
+    use rlay_core::{AppState, Renderer, RootFactory, macroquad_renderer::MacroquadRenderer};
 
     // let mut renderer = MacroquadRenderer {};
 
@@ -74,8 +76,9 @@ async fn main() -> Result<(), RlayError> {
     //     .await
     //     .unwrap();
 
+    let state = AppState::new();
     loop {
-        let mut renderer = Renderer::from(MacroquadRenderer {});
+        let mut renderer = Renderer::from(MacroquadRenderer {}, Arc::clone(&state));
         renderer.render(test_create_element)?;
         next_frame().await;
     }
