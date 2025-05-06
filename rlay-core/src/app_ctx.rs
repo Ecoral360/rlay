@@ -166,6 +166,11 @@ impl AppCtx {
         self.state.lock().unwrap().is_hovered(element_id)
     }
 
+    pub fn is_clicked(&self, element_id: &String) -> bool {
+        self.is_hovered(element_id)
+            && self.input_state.mouse.left_button == MouseButtonState::Pressed
+    }
+
     pub fn state(&self) -> &Arc<Mutex<AppState>> {
         &self.state
     }
