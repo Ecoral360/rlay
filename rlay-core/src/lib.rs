@@ -306,7 +306,6 @@ macro_rules! align {
     };
 
     ($align_x:ident $(, $align_y:ident)? $(,)?) => {
-        #[allow(needless_update)]
         $crate::LayoutAlignment {
             x: $crate::Alignment::$align_x,
             $(y: $crate::Alignment::$align_y,)?
@@ -315,7 +314,6 @@ macro_rules! align {
     };
 
     (x = $align:ident $(, $(y = $y:ident)?)?) => {
-        #[allow(needless_update)]
         $crate::LayoutAlignment {
             x: $crate::Alignment::$align,
             $($(y: $crate::Alignment::$y,)?)?
@@ -324,7 +322,6 @@ macro_rules! align {
     };
 
     (y = $align:ident $(, $(x = $x:ident)?)?) => {
-        #[allow(needless_update)]
         $crate::LayoutAlignment {
             y: $crate::Alignment::$align,
             $($(x: $crate::Alignment::$x,)?)?

@@ -6,10 +6,11 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use macroquad::rand::rand;
-
 use crate::{
-    app_ctx, err::RlayError, mem::{ArenaElement, ElementNode}, Alignment, AppCtx, ContainerElement, Element, ContainerConfig, LayoutAlignment, LayoutDirection, MinMax, Sizing, SizingAxis
+    Alignment, AppCtx, ContainerConfig, ContainerElement, Element, LayoutAlignment,
+    LayoutDirection, MinMax, Sizing, SizingAxis, app_ctx,
+    err::RlayError,
+    mem::{ArenaElement, ElementNode},
 };
 
 macro_rules! def_states {
@@ -636,51 +637,98 @@ impl LayoutStep for ElementLayout<Positions> {
 
         if let Element::Container(ref container) = self.element {
             let config = container.config();
-            struct StepCtx {
-                offset: f32,
+            struct Offsets {
+                offset: Vector2D,
             }
 
             let offset = config.padding_in_axis() as f32;
 
-            let mut step_ctx = StepCtx { offset };
+            let mut step_ctx = config.layout_direction.value_on_axis(
+                Offsets {
+                    offset: Vector2D::new(
+                        config.padding_in_axis() as f32,
+                        config.padding_in_other_axis() as f32,
+                    ),
+                },
+                Offsets {
+                    offset: Vector2D::new(
+                        config.padding_in_other_axis() as f32,
+                        config.padding_in_axis() as f32,
+                    ),
+                },
+            );
+
+            let total_width = config.layout_direction.value_on_axis(
+                self.children
+                    .iter()
+                    .map(|c| c.dimensions.width)
+                    .sum::<f32>()
+                    + config.child_gap as f32 * (self.children.len().max(1) - 1) as f32,
+                self.children
+                    .iter()
+                    .map(|c| (c.dimensions.width * 100.0) as i32)
+                    .max()
+                    .unwrap_or(0) as f32 / 100.0,
+            );
+
+            match config.align.x {
+                Alignment::End => {
+                    step_ctx.offset.x = self.dimensions().width - total_width - step_ctx.offset.x;
+                }
+                Alignment::Center => {
+                    step_ctx.offset.x += (self.dimensions().width - total_width) / 2.0;
+                }
+                _ => {}
+            }
+
+            let total_height = config.layout_direction.value_on_axis(
+                self.children
+                    .iter()
+                    .map(|c| (c.dimensions.height * 100.0) as i32)
+                    .max()
+                    .unwrap_or(0) as f32 / 100.0,
+                self.children
+                    .iter()
+                    .map(|c| c.dimensions.height)
+                    .sum::<f32>()
+                    + config.child_gap as f32 * (self.children.len().max(1) - 1) as f32,
+            );
+
+            match config.align.y {
+                Alignment::End => {
+                    step_ctx.offset.y = self.dimensions().height - total_height - step_ctx.offset.y;
+                }
+                Alignment::Center => {
+                    step_ctx.offset.y += (self.dimensions().height - total_height) / 2.0;
+                }
+                _ => {}
+            }
 
             children = self
                 .children
                 .into_iter()
-                .rev()
                 .scan(&mut step_ctx, |ctx, mut child| {
-                    let offset = config.layout_direction.value_on_axis(
-                        Vector2D::new(ctx.offset, config.padding_in_other_axis() as f32),
-                        Vector2D::new(config.padding_in_other_axis() as f32, ctx.offset),
-                    );
+                    let offset = &ctx;
 
                     match config.align.x {
-                        Alignment::Start => {
-                            child.position.x = (child.position + parent_position + offset).x;
+                        Alignment::Start | Alignment::Center | Alignment::End => {
+                            child.position.x = (child.position + parent_position + offset.offset).x;
                         }
-                        Alignment::End => {
-                            child.position.x = (child.position + parent_position).x
+                        Alignment::EndReverse => {
+                            child.position.x = (child.position + parent_position - offset.offset).x
                                 + self.dimensions.width
-                                - offset.x
                                 - child.dimensions.width;
-                        }
-                        Alignment::Center => {
-                            child.position.x = (child.position + parent_position + offset).x;
                         }
                     }
 
                     match config.align.y {
-                        Alignment::Start => {
-                            child.position.y = (child.position + parent_position + offset).y;
+                        Alignment::Start | Alignment::End | Alignment::Center => {
+                            child.position.y = (child.position + parent_position + offset.offset).y;
                         }
-                        Alignment::End => {
-                            child.position.y = (child.position + parent_position).y
+                        Alignment::EndReverse => {
+                            child.position.y = (child.position + parent_position - offset.offset).y
                                 + self.dimensions.height
-                                - offset.y
                                 - child.dimensions.height;
-                        }
-                        Alignment::Center => {
-                            child.position.y = (child.position + parent_position + offset).y;
                         }
                     }
 
@@ -689,10 +737,11 @@ impl LayoutStep for ElementLayout<Positions> {
                         return Some(layout);
                     };
 
-                    ctx.offset += config
-                        .layout_direction
-                        .value_on_axis(layout.dimensions.width, layout.dimensions.height)
-                        + config.child_gap as f32;
+                    ctx.offset = ctx.offset
+                        + config.layout_direction.value_on_axis(
+                            Vector2D::new(layout.dimensions.width + config.child_gap as f32, 0.0),
+                            Vector2D::new(0.0, layout.dimensions.height + config.child_gap as f32),
+                        );
 
                     Some(Ok(layout))
                 })

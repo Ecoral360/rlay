@@ -429,6 +429,7 @@ pub enum Alignment {
     #[default]
     Start,
     End,
+    EndReverse,
     Center,
 }
 
@@ -459,12 +460,13 @@ impl ContainerConfig {
         match self.layout_direction {
             LayoutDirection::LeftToRight => match self.align.x {
                 Alignment::Start => self.padding.left,
-                Alignment::End => self.padding.right,
+                Alignment::End | Alignment::EndReverse => self.padding.right,
                 Alignment::Center => self.padding.left,
             },
             LayoutDirection::TopToBottom => match self.align.y {
                 Alignment::Start => self.padding.top,
                 Alignment::End => self.padding.bottom,
+                Alignment::End | Alignment::EndReverse => self.padding.bottom,
                 Alignment::Center => self.padding.top,
             },
         }
@@ -474,12 +476,12 @@ impl ContainerConfig {
         match self.layout_direction {
             LayoutDirection::TopToBottom => match self.align.x {
                 Alignment::Start => self.padding.left,
-                Alignment::End => self.padding.right,
+                Alignment::End | Alignment::EndReverse => self.padding.right,
                 Alignment::Center => self.padding.left,
             },
             LayoutDirection::LeftToRight => match self.align.y {
                 Alignment::Start => self.padding.top,
-                Alignment::End => self.padding.bottom,
+                Alignment::End | Alignment::EndReverse => self.padding.bottom,
                 Alignment::Center => self.padding.top,
             },
         }

@@ -28,19 +28,14 @@ impl AppCtx {
     }
 
     pub fn get_local_id(&self) -> String {
-        let nb_child = self
-            .parent_stack
-            .first()
-            .and_then(|idx| self.elements.get_nb_children(*idx))
-            .unwrap_or(0);
-
         self.parent_stack
             .iter()
-            .map(ToString::to_string)
+            .map(|p_idx| {
+                let nb_child = self.elements.get_nb_children(*p_idx).unwrap_or(0);
+                format!("{}-{}", p_idx, nb_child)
+            })
             .reduce(|x, y| x + "_" + &y)
             .unwrap_or_default()
-            + "-"
-            + &nb_child.to_string()
     }
 
     pub(crate) fn set_input_state(&mut self, input_state: InputState) {
@@ -96,18 +91,18 @@ impl AppCtx {
         &self.elements
     }
 
-    pub fn set_root(&mut self, new_root: Element) -> Result<usize, MemError> {
-        let root_idx = self.elements.insert_node(new_root, None)?;
-
-        let Some(old_root_idx) = self.parent_stack.first().copied() else {
-            return Ok(root_idx);
-        };
-
-        self.elements.set_parent(root_idx, old_root_idx)?;
-        self.parent_stack[0] = root_idx;
-
-        Ok(root_idx)
-    }
+    // pub fn set_root(&mut self, new_root: Element) -> Result<usize, MemError> {
+    //     let root_idx = self.elements.insert_node(new_root, None)?;
+    //
+    //     let Some(old_root_idx) = self.parent_stack.first().copied() else {
+    //         return Ok(root_idx);
+    //     };
+    //
+    //     self.elements.set_parent(root_idx, old_root_idx)?;
+    //     self.parent_stack[0] = root_idx;
+    //
+    //     Ok(root_idx)
+    // }
 
     pub fn open_element(&mut self, el: Element) -> usize {
         let parent_idx = self.parent_stack.last().copied();
