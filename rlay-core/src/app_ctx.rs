@@ -20,13 +20,6 @@ impl AppCtx {
         Self::default()
     }
 
-    pub fn next_frame(self) -> Self {
-        Self {
-            state: self.state,
-            ..Default::default()
-        }
-    }
-
     pub fn get_local_id(&self) -> String {
         self.parent_stack
             .iter()
@@ -36,6 +29,10 @@ impl AppCtx {
             })
             .reduce(|x, y| x + "_" + &y)
             .unwrap_or_default()
+    }
+
+    pub fn get_input_state(&self) -> &InputState {
+        self.state.input_state()
     }
 
     pub(crate) fn set_input_state(&mut self, input_state: InputState) {
@@ -50,6 +47,27 @@ impl AppCtx {
         self.state.is_hovered(element_id)
     }
 
+    pub fn set_flag(&mut self, element_id: &str, flag: impl ToString, value: bool) -> bool {
+        self.state.set_flag(element_id, flag, value)
+    }
+
+    pub fn get_flag(&self, element_id: &str, flag: &str) -> bool {
+        self.state.get_flag(element_id, flag)
+    }
+
+    pub fn get_attr(&self, element_id: &str, attr: &str) -> Option<&String> {
+        self.state.get_attr(element_id, attr)
+    }
+
+    pub fn set_attr(
+        &mut self,
+        element_id: &str,
+        attr: impl ToString,
+        value: String,
+    ) -> Option<String> {
+        self.state.set_attr(element_id, attr, value)
+    }
+
     pub fn is_clicked(&self, element_id: &str) -> bool {
         self.state.is_clicked(element_id)
     }
@@ -62,7 +80,7 @@ impl AppCtx {
         self.state.get_element_state(element_id)
     }
 
-    pub fn get_mut_element_state(&mut self, element_id: &str) -> Option<&mut ElementState> {
+    pub fn get_mut_element_state(&mut self, element_id: &str) -> &mut ElementState {
         self.state.get_mut_element_state(element_id)
     }
 

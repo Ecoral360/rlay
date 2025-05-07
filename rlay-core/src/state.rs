@@ -19,7 +19,7 @@ pub struct ElementState {
     is_hovered: bool,
     is_clicked: bool,
     is_right_clicked: bool,
-    attrs: HashMap<String, Value>,
+    attrs: HashMap<String, String>,
     flags: HashMap<String, bool>,
 }
 
@@ -37,11 +37,11 @@ impl ElementState {
         self.is_right_clicked = false;
     }
 
-    pub fn get_attr(&self, k: &String) -> Option<&Value> {
+    pub fn get_attr(&self, k: &String) -> Option<&String> {
         self.attrs.get(k)
     }
 
-    pub fn set_attr(&mut self, k: String, value: Value) -> Option<Value> {
+    pub fn set_attr(&mut self, k: String, value: String) -> Option<String> {
         self.attrs.insert(k, value)
     }
 
@@ -82,14 +82,14 @@ pub struct AppState {
     input_state_init: bool,
 }
 
-fn get_or_instert(map: &mut HashMap<String, ElementState>, key: String) -> &ElementState {
+fn get_or_insert(map: &mut HashMap<String, ElementState>, key: String) -> &ElementState {
     if !map.contains_key(&key) {
         map.insert(key.clone(), ElementState::new(key.clone()));
     }
     map.get(&key).unwrap()
 }
 
-fn get_mut_or_instert(map: &mut HashMap<String, ElementState>, key: String) -> &mut ElementState {
+fn get_mut_or_insert(map: &mut HashMap<String, ElementState>, key: String) -> &mut ElementState {
     if !map.contains_key(&key) {
         map.insert(key.clone(), ElementState::new(key.clone()));
     }
@@ -107,12 +107,12 @@ impl AppState {
         }
 
         for hovered in self.hovered.iter() {
-            get_mut_or_instert(&mut self.element_state, hovered.to_owned()).reset();
+            get_mut_or_insert(&mut self.element_state, hovered.to_owned()).reset();
         }
         self.hovered.clear();
         self._update_hovered_elements(element);
         for hovered in self.hovered.iter() {
-            let state = get_mut_or_instert(&mut self.element_state, hovered.to_owned());
+            let state = get_mut_or_insert(&mut self.element_state, hovered.to_owned());
             state.is_hovered = true;
             state.is_clicked = self.input_state.mouse.left_button == MouseButtonState::Pressed;
             state.is_right_clicked =
@@ -157,8 +157,34 @@ impl AppState {
         self.element_state.get(element_id)
     }
 
-    pub fn get_mut_element_state(&mut self, element_id: &str) -> Option<&mut ElementState> {
-        self.element_state.get_mut(element_id)
+    pub fn get_mut_element_state(&mut self, element_id: &str) -> &mut ElementState {
+        get_mut_or_insert(&mut self.element_state, element_id.to_string())
+    }
+
+    pub fn set_flag(&mut self, element_id: &str, flag: impl ToString, value: bool) -> bool {
+        self.get_mut_element_state(element_id)
+            .set_flag(flag.to_string(), value)
+    }
+
+    pub fn get_flag(&self, element_id: &str, flag: &str) -> bool {
+        self.get_element_state(element_id)
+            .map(|state| state.get_flag(&flag.to_string()))
+            .unwrap_or_default()
+    }
+
+    pub fn set_attr(
+        &mut self,
+        element_id: &str,
+        attr: impl ToString,
+        value: String,
+    ) -> Option<String> {
+        self.get_mut_element_state(element_id)
+            .set_attr(attr.to_string(), value)
+    }
+
+    pub fn get_attr(&self, element_id: &str, attr: &str) -> Option<&String> {
+        self.get_element_state(element_id)
+            .and_then(|state| state.get_attr(&attr.to_string()))
     }
 
     pub fn input_state(&self) -> &InputState {
@@ -226,6 +252,7 @@ pub struct KeyboardInput {
     pub keys_down: HashSet<u16>,
     pub keys_released: HashSet<u16>,
     pub keys_pressed: HashSet<u16>,
+    pub last_char_pressed: Option<char>,
 
     pub shift_down: bool,
     pub ctrl_down: bool,

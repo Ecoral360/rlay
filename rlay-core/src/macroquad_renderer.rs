@@ -1,11 +1,9 @@
 use std::sync::{Arc, Mutex};
 
 use macroquad::{
-    color::{BLACK, BLUE, Color, PINK, RED, YELLOW},
+    color::{Color, BLACK, BLUE, PINK, RED, YELLOW},
     input::{
-        self, KeyCode, get_keys_down, get_keys_pressed, get_keys_released, is_key_down,
-        is_mouse_button_down, is_mouse_button_pressed, is_mouse_button_released,
-        mouse_delta_position, mouse_position,
+        self, get_char_pressed, get_keys_down, get_keys_pressed, get_keys_released, is_key_down, is_mouse_button_down, is_mouse_button_pressed, is_mouse_button_released, mouse_delta_position, mouse_position, KeyCode
     },
     miniquad::window::screen_size,
     shapes::draw_rectangle,
@@ -196,6 +194,7 @@ impl Render for MacroquadRenderer {
                     .into_iter()
                     .map(|code| code as u16)
                     .collect(),
+                last_char_pressed: get_char_pressed(),
                 shift_down: is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift),
                 ctrl_down: is_key_down(KeyCode::LeftControl) || is_key_down(KeyCode::RightControl),
                 alt_down: is_key_down(KeyCode::LeftAlt) || is_key_down(KeyCode::RightAlt),

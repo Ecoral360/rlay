@@ -163,11 +163,13 @@ macro_rules! rlay {
 #[macro_export]
 macro_rules! view_config {
     ($($config:tt)*) => {
-        #[allow(clippy::needless_update)]
         {
-            let mut config = $crate::ContainerConfig::default();
-            $crate::_rlay!(config; $($config)*);
-            config
+            #[allow(clippy::needless_update)]
+            {
+                let mut config = $crate::ContainerConfig::default();
+                $crate::_rlay!(config; $($config)*);
+                config
+            }
         }
     }
 }
