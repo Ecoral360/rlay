@@ -64,7 +64,7 @@ pub enum Element {
 }
 
 impl Element {
-    pub fn container(config: ElementConfig, id: Option<String>) -> Self {
+    pub fn container(config: ContainerConfig, id: Option<String>) -> Self {
         Self::Container(ContainerElement::new(config, id))
     }
 

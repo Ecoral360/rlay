@@ -14,7 +14,7 @@ use macroquad::{
 };
 
 use crate::{
-    AppCtx, BorderWidth, Color as RlayColor, ContainerElement, Done, Element, ElementConfig,
+    AppCtx, BorderWidth, Color as RlayColor, ContainerElement, Done, Element, ContainerConfig,
     ElementLayout, InputState, KeyboardInput, MouseButtonState, MouseInput, Positions,
     layout::{Dimension2D, Vector2D},
     render::Render,
@@ -38,7 +38,7 @@ pub struct MacroquadRenderer {}
 impl Render for MacroquadRenderer {
     fn setup(&mut self, ctx: &mut AppCtx) {
         let mut screen_root = Element::Container(ContainerElement::new(
-            ElementConfig {
+            ContainerConfig {
                 sizing: sizing!(Fixed(screen_width()), Fixed(screen_height())),
                 ..Default::default()
             },
@@ -100,8 +100,8 @@ impl Render for MacroquadRenderer {
         }
     }
 
-    fn update_input_state(&mut self, ctx: &mut AppCtx) {
-        ctx.set_input_state(InputState {
+    fn next_input_state(&mut self, ctx: &mut AppCtx) -> InputState {
+        InputState {
             mouse: MouseInput {
                 mouse_position: mouse_position().into(),
                 mouse_delta: mouse_delta_position().to_array().into(),
@@ -157,6 +157,6 @@ impl Render for MacroquadRenderer {
                 alt_down: is_key_down(KeyCode::LeftAlt) || is_key_down(KeyCode::RightAlt),
                 super_down: is_key_down(KeyCode::LeftSuper) || is_key_down(KeyCode::RightSuper),
             },
-        });
+        }
     }
 }

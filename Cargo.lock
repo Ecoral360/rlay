@@ -555,8 +555,19 @@ dependencies = [
  "derive_more",
  "macroquad",
  "piet",
+ "rlay-components",
  "rlay-core",
  "rlay-macros",
+]
+
+[[package]]
+name = "rlay-components"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "macroquad",
+ "piet",
+ "rlay-core",
 ]
 
 [[package]]

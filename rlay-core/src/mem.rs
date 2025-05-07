@@ -80,6 +80,10 @@ where
         )
     }
 
+    pub fn get_nb_children(&self, parent_idx: usize) -> Option<usize> {
+        Some(self.arena.get(parent_idx)?.children.len())
+    }
+
     pub fn find(&self, val: &T) -> Option<usize> {
         for node in &self.arena {
             if &node.val == val {
@@ -186,7 +190,7 @@ impl ArenaElement {
     pub fn get_element_with_id(&self, id: &str) -> Option<&Element> {
         for el in self.arena.iter() {
             if el.val.id().is_some_and(|el_id| el_id == id) {
-                return Some(&el.val)
+                return Some(&el.val);
             }
         }
         None

@@ -9,7 +9,7 @@ use std::{
 use macroquad::rand::rand;
 
 use crate::{
-    app_ctx, err::RlayError, mem::{ArenaElement, ElementNode}, Alignment, AppCtx, ContainerElement, Element, ElementConfig, LayoutAlignment, LayoutDirection, MinMax, Sizing, SizingAxis
+    app_ctx, err::RlayError, mem::{ArenaElement, ElementNode}, Alignment, AppCtx, ContainerElement, Element, ContainerConfig, LayoutAlignment, LayoutDirection, MinMax, Sizing, SizingAxis
 };
 
 macro_rules! def_states {
@@ -266,7 +266,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
             .map(|mut child| {
                 if let Element::Container(ContainerElement {
                     config:
-                        ElementConfig {
+                        ContainerConfig {
                             sizing:
                                 Sizing {
                                     width: SizingAxis::Percent(val),
@@ -304,7 +304,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
                     .map(|mut child| {
                         if let Element::Container(ContainerElement {
                             config:
-                                ElementConfig {
+                                ContainerConfig {
                                     sizing:
                                         Sizing {
                                             width: SizingAxis::Grow(min_max),
@@ -327,7 +327,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
                         matches!(
                             child.data(),
                             Element::Container(ContainerElement {
-                                config: ElementConfig {
+                                config: ContainerConfig {
                                     sizing: Sizing {
                                         width: SizingAxis::Grow(..),
                                         ..
@@ -483,7 +483,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
             .map(|mut child| {
                 if let Element::Container(ContainerElement {
                     config:
-                        ElementConfig {
+                        ContainerConfig {
                             sizing:
                                 Sizing {
                                     height: SizingAxis::Percent(val),
@@ -521,7 +521,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
                     .map(|mut child| {
                         if let Element::Container(ContainerElement {
                             config:
-                                ElementConfig {
+                                ContainerConfig {
                                     sizing:
                                         Sizing {
                                             height: SizingAxis::Grow(min_max),
@@ -544,7 +544,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
                         matches!(
                             child.data(),
                             Element::Container(ContainerElement {
-                                config: ElementConfig {
+                                config: ContainerConfig {
                                     sizing: Sizing {
                                         height: SizingAxis::Grow(..),
                                         ..
@@ -722,7 +722,4 @@ pub fn calculate_layout(root: ElementLayout<Initial>) -> Result<ElementLayout<Do
         .apply_layout_step()?
         .apply_layout_step()?
         .apply_layout_step()
-}
-
-pub fn update_hovered_elements(ctx: &mut AppCtx, root: &ElementLayout<Done>) {
 }

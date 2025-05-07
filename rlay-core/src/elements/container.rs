@@ -268,6 +268,14 @@ impl LayoutDirection {
     }
 }
 
+#[allow(non_upper_case_globals)]
+pub const border_width: BorderWidth = BorderWidth {
+    left: None,
+    right: None,
+    top: None,
+    bottom: None,
+};
+
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct BorderWidth {
     pub left: Option<f32>,
@@ -431,7 +439,7 @@ pub struct LayoutAlignment {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
-pub struct ElementConfig {
+pub struct ContainerConfig {
     pub sizing: Sizing,
     pub background_color: Color,
     pub padding: Padding,
@@ -446,7 +454,7 @@ pub struct ElementConfig {
     pub pointer_capture: PointerCaptureMode,
 }
 
-impl ElementConfig {
+impl ContainerConfig {
     pub fn padding_in_axis(&self) -> i32 {
         match self.layout_direction {
             LayoutDirection::LeftToRight => match self.align.x {
@@ -481,15 +489,15 @@ impl ElementConfig {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ContainerElement {
     pub id: Option<String>,
-    pub config: ElementConfig,
+    pub config: ContainerConfig,
 }
 
 impl ContainerElement {
-    pub fn new(config: ElementConfig, id: Option<String>) -> Self {
+    pub fn new(config: ContainerConfig, id: Option<String>) -> Self {
         Self { config, id }
     }
 
-    pub fn config(&self) -> &ElementConfig {
+    pub fn config(&self) -> &ContainerConfig {
         &self.config
     }
 

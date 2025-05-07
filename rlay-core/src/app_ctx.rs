@@ -1,198 +1,79 @@
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::write,
-    marker::PhantomData,
-    sync::{Arc, LazyLock, Mutex},
-};
-
-use macroquad::text::{Font, TextDimensions, load_ttf_font, measure_text};
+use macroquad::text::{TextDimensions, measure_text};
 
 use crate::{
-    Dimension2D, Done, Element, ElementLayout, Event, FitSizingWidth, Initial, MinMax,
-    PointerCaptureMode, Sizing, SizingAxis, Vector2D,
+    AppState, Dimension2D, Done, Element, ElementLayout, ElementState, Event, FitSizingWidth,
+    Initial, InputState, MinMax, MouseButtonState, PointerCaptureMode, Sizing, SizingAxis, Value,
+    Vector2D,
     err::RlayError,
     mem::{ArenaElement, ArenaTree, ElementNode, MemError},
 };
-
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MouseButtonState {
-    #[default]
-    Up,
-    Down,
-    Released,
-    Pressed,
-}
-
-#[derive(Default)]
-pub struct MouseInput {
-    pub mouse_position: Vector2D,
-    pub mouse_delta: Vector2D,
-    pub left_button: MouseButtonState,
-    pub right_button: MouseButtonState,
-    pub middle_button: MouseButtonState,
-}
-
-#[derive(Default)]
-pub struct KeyboardInput {
-    pub keys_down: HashSet<u16>,
-    pub keys_released: HashSet<u16>,
-    pub keys_pressed: HashSet<u16>,
-
-    pub shift_down: bool,
-    pub ctrl_down: bool,
-    pub alt_down: bool,
-    pub super_down: bool,
-}
-
-#[derive(Default)]
-pub struct InputState {
-    pub mouse: MouseInput,
-    pub keyboard: KeyboardInput,
-}
-
-pub type ElementState = HashMap<String, Value>;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Value {
-    String(String),
-    Bool(bool),
-    Int(i32),
-    Float(f32),
-}
 
 #[derive(Default)]
 pub struct AppCtx {
     parent_stack: Vec<usize>,
     elements: ArenaElement,
-    fonts: HashMap<String, Font>,
-    input_state: InputState,
-    state: Arc<Mutex<AppState>>,
-}
-
-#[derive(Default)]
-pub struct AppState {
-    hovered: HashSet<String>,
-    element_state: HashMap<String, ElementState>,
-}
-
-impl AppState {
-    pub fn new() -> Arc<Mutex<Self>> {
-        Arc::new(Mutex::new(Self::default()))
-    }
-
-    fn update_hovered_elements(&mut self, mouse_position: Vector2D, element: &ElementLayout<Done>) {
-        if is_cursor_inside_rect(mouse_position, element) {
-            // if !self.hovered.is_empty() {
-            //     return;
-            // }
-            match element.data() {
-                Element::Container(container_element) => {
-                    if let Some(id) = container_element.id() {
-                        self.hovered.insert(id.to_string());
-                    }
-                }
-                Element::Text(text_element) => {}
-                Element::Image(image_element) => {}
-            }
-            for child in element.children() {
-                self.update_hovered_elements(mouse_position, child);
-            }
-        } else if let Some(id) = element.data().id() {
-            self.hovered.remove(id);
-            for child in element.children() {
-                self.update_hovered_elements(mouse_position, child);
-            }
-        }
-    }
-
-    pub fn is_hovered(&self, element_id: &String) -> bool {
-        self.hovered.contains(element_id)
-    }
-
-    pub fn get_element_state(&self, element_id: &str) -> Option<&ElementState> {
-        self.element_state.get(element_id)
-    }
-
-    pub fn update_element_state(
-        &mut self,
-        element_id: &str,
-        key: String,
-        value: Value,
-    ) -> Option<Value> {
-        let state = match self.element_state.get_mut(element_id) {
-            Some(map) => map,
-            None => {
-                self.element_state
-                    .insert(element_id.to_string(), HashMap::new());
-                self.element_state.get_mut(element_id).unwrap()
-            }
-        };
-
-        state.insert(key, value)
-    }
-}
-
-fn is_cursor_inside_rect(cursor: Vector2D, element: &ElementLayout<Done>) -> bool {
-    cursor.x >= element.position().x
-        && cursor.x <= element.position().x + element.dimensions().width
-        && cursor.y >= element.position().y
-        && cursor.y <= element.position().y + element.dimensions().height
+    state: AppState,
 }
 
 impl AppCtx {
-    pub fn new(state: Arc<Mutex<AppState>>) -> Self {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn next_frame(self) -> Self {
         Self {
-            state,
+            state: self.state,
             ..Default::default()
         }
     }
 
-    pub fn set_state(&mut self, state: Arc<Mutex<AppState>>) {
-        self.state = state;
+    pub fn get_local_id(&self) -> String {
+        let nb_child = self
+            .parent_stack
+            .first()
+            .and_then(|idx| self.elements.get_nb_children(*idx))
+            .unwrap_or(0);
+
+        self.parent_stack
+            .iter()
+            .map(ToString::to_string)
+            .reduce(|x, y| x + "_" + &y)
+            .unwrap_or_default()
+            + "-"
+            + &nb_child.to_string()
     }
 
     pub(crate) fn set_input_state(&mut self, input_state: InputState) {
-        self.input_state = input_state;
+        self.state.set_input_state(input_state);
     }
 
     pub(crate) fn update_hovered_elements(&mut self, element: &ElementLayout<Done>) {
-        self.state
-            .lock()
-            .unwrap()
-            .update_hovered_elements(self.input_state.mouse.mouse_position, element);
+        self.state.update_hovered_elements(element);
     }
 
-    pub fn is_hovered(&self, element_id: &String) -> bool {
-        self.state.lock().unwrap().is_hovered(element_id)
+    pub fn is_hovered(&self, element_id: &str) -> bool {
+        self.state.is_hovered(element_id)
     }
 
-    pub fn is_clicked(&self, element_id: &String) -> bool {
-        self.is_hovered(element_id)
-            && self.input_state.mouse.left_button == MouseButtonState::Pressed
+    pub fn is_clicked(&self, element_id: &str) -> bool {
+        self.state.is_clicked(element_id)
     }
 
-    pub fn state(&self) -> &Arc<Mutex<AppState>> {
+    pub fn state(&self) -> &AppState {
         &self.state
     }
 
-    pub fn get_element_state(&self, element_id: &str, key: &String) -> Option<Value> {
-        self.state
-            .lock()
-            .unwrap()
-            .get_element_state(element_id)
-            .and_then(|map| map.get(key).cloned())
+    pub fn get_element_state(&self, element_id: &str) -> Option<&ElementState> {
+        self.state.get_element_state(element_id)
     }
 
-    pub fn update_element_state(
-        &mut self,
-        element_id: &str,
-        key: String,
-        value: Value,
-    ) -> Option<Value> {
-        self.state
-            .lock()
-            .unwrap()
-            .update_element_state(element_id, key, value)
+    pub fn get_mut_element_state(&mut self, element_id: &str) -> Option<&mut ElementState> {
+        self.state.get_mut_element_state(element_id)
+    }
+
+    pub(crate) fn clear(&mut self) {
+        self.parent_stack.clear();
+        self.elements.clear();
     }
 
     pub fn get_element_with_id(&self, id: &str) -> Result<&Element, RlayError> {
@@ -209,16 +90,6 @@ impl AppCtx {
         self.elements()
             .get_val(*current_idx)
             .ok_or(RlayError::ElementNotFound)
-    }
-
-    pub(crate) fn clear(&mut self) {
-        self.parent_stack.clear();
-        self.elements.clear();
-        self.fonts.clear();
-    }
-
-    pub fn add_font(&mut self, name: String, font: Font) {
-        self.fonts.insert(name, font);
     }
 
     pub fn elements(&self) -> &ArenaElement {
@@ -268,15 +139,11 @@ impl TryFrom<&mut AppCtx> for ElementLayout<Initial> {
             .get_val(root)
             .ok_or(RlayError::ElementNotFound)?;
 
-        unpack_node(value, &value.elements, root_value.clone())
+        unpack_node(&value.elements, root_value.clone())
     }
 }
 
-fn unpack_node(
-    ctx: &AppCtx,
-    arena: &ArenaElement,
-    node: Element,
-) -> Result<ElementLayout<Initial>, RlayError> {
+fn unpack_node(arena: &ArenaElement, node: Element) -> Result<ElementLayout<Initial>, RlayError> {
     match node {
         Element::Container(ref container) => {
             let config = container.config();
@@ -305,7 +172,7 @@ fn unpack_node(
                 children
                     .unwrap_or_default()
                     .into_iter()
-                    .map(|child| unpack_node(ctx, arena, child.clone()))
+                    .map(|child| unpack_node(arena, child.clone()))
                     .collect::<Result<Box<[_]>, _>>()?,
             ))
         }
@@ -318,15 +185,7 @@ fn unpack_node(
                 width,
                 height,
                 offset_y,
-            } = measure_text(
-                data,
-                config
-                    .font_name
-                    .as_ref()
-                    .and_then(|name| ctx.fonts.get(name)),
-                config.font_size,
-                1.0,
-            );
+            } = measure_text(data, None, config.font_size, 1.0);
 
             Ok(ElementLayout::new(
                 Vector2D::default(),

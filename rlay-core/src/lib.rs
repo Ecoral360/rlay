@@ -2,9 +2,10 @@
 
 pub use app_ctx::*;
 pub use elements::*;
+pub use event::*;
 pub use layout::*;
 pub use render::*;
-pub use event::*;
+pub use state::*;
 
 mod app_ctx;
 pub mod elements;
@@ -13,6 +14,7 @@ mod event;
 mod layout;
 mod mem;
 mod render;
+mod state;
 
 #[cfg(feature = "macroquad")]
 pub mod macroquad_renderer;
@@ -39,7 +41,7 @@ macro_rules! rlay {
         #[allow(clippy::needless_update)]
         {
             let config = {
-                let mut config = $crate::ElementConfig::default();
+                let mut config = $crate::ContainerConfig::default();
                 $crate::_rlay!(config; $($config)*);
                 config
             };
@@ -56,7 +58,7 @@ macro_rules! rlay {
         #[allow(clippy::needless_update)]
         {
             let config = {
-                let mut config = $crate::ElementConfig::default();
+                let mut config = $crate::ContainerConfig::default();
                 $crate::_rlay!(config; $($config)*);
                 config
             };
@@ -73,7 +75,7 @@ macro_rules! rlay {
         #[allow(clippy::needless_update)]
         {
             let config = {
-                let mut config = $crate::ElementConfig::default();
+                let mut config = $crate::ContainerConfig::default();
                 $crate::_rlay!(config; $($config)*);
                 config
             };
@@ -94,7 +96,7 @@ macro_rules! rlay {
         #[allow(clippy::needless_update)]
         {
             let config = {
-                let mut config = $crate::ElementConfig::default();
+                let mut config = $crate::ContainerConfig::default();
                 $crate::_rlay!(config; $($config)*);
                 config
             };
@@ -159,12 +161,24 @@ macro_rules! rlay {
 }
 
 #[macro_export]
+macro_rules! view_config {
+    ($($config:tt)*) => {
+        #[allow(clippy::needless_update)]
+        {
+            let mut config = $crate::ContainerConfig::default();
+            $crate::_rlay!(config; $($config)*);
+            config
+        }
+    }
+}
+
+#[macro_export]
 macro_rules! view {
     ($ctx:ident, {$($config:tt)*}) => {{
         #[allow(clippy::needless_update)]
         {
             let config = {
-                let mut config = $crate::ElementConfig::default();
+                let mut config = $crate::ContainerConfig::default();
                 $crate::_rlay!(config; $($config)*);
                 config
             };
@@ -181,7 +195,7 @@ macro_rules! view {
         #[allow(clippy::needless_update)]
         {
             let config = {
-                let mut config = $crate::ElementConfig::default();
+                let mut config = $crate::ContainerConfig::default();
                 $crate::_rlay!(config; $($config)*);
                 config
             };
@@ -237,6 +251,11 @@ macro_rules! _rlay {
         $config.$field = $crate::_rlay_field!($field = $val);
         $crate::_rlay!($config; $($($($rest)+)?)?)
     };
+
+    ($config:ident; $field:expr) => {
+        $config = $field;
+    };
+
 }
 
 #[macro_export]
@@ -257,8 +276,26 @@ macro_rules! _rlay_field {
         Some($val.into())
     };
 
+    (border = {$($val:tt)*}) => {
+        Some($crate::border!($($val)*))
+    };
+
     ($field:ident = $val:expr) => {
         $val.into()
+    };
+}
+
+#[macro_export]
+macro_rules! border {
+    () => {
+        $crate::BorderConfig::default()
+    };
+
+    ($($field:ident = $val:expr),* $(,)?) => {
+        $crate::BorderConfig {
+            $($field: $val,)*
+            ..Default::default()
+        }
     };
 }
 
@@ -269,6 +306,7 @@ macro_rules! align {
     };
 
     ($align_x:ident $(, $align_y:ident)? $(,)?) => {
+        #[allow(needless_update)]
         $crate::LayoutAlignment {
             x: $crate::Alignment::$align_x,
             $(y: $crate::Alignment::$align_y,)?
@@ -277,6 +315,7 @@ macro_rules! align {
     };
 
     (x = $align:ident $(, $(y = $y:ident)?)?) => {
+        #[allow(needless_update)]
         $crate::LayoutAlignment {
             x: $crate::Alignment::$align,
             $($(y: $crate::Alignment::$y,)?)?
@@ -285,6 +324,7 @@ macro_rules! align {
     };
 
     (y = $align:ident $(, $(x = $x:ident)?)?) => {
+        #[allow(needless_update)]
         $crate::LayoutAlignment {
             y: $crate::Alignment::$align,
             $($(x: $crate::Alignment::$x,)?)?
