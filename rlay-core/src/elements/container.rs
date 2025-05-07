@@ -398,10 +398,19 @@ pub enum PointerCaptureMode {
     Passthrough,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum BorderMode {
+    #[default]
+    Outset,
+    Inset,
+    Midset,
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct BorderConfig {
     pub color: Color,
     pub width: BorderWidth,
+    pub mode: BorderMode,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]

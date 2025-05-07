@@ -14,7 +14,7 @@ use macroquad::{
 };
 
 use crate::{
-    AppCtx, BorderWidth, Color as RlayColor, ContainerElement, Done, Element, ContainerConfig,
+    AppCtx, BorderWidth, Color as RlayColor, ContainerConfig, ContainerElement, Done, Element,
     ElementLayout, InputState, KeyboardInput, MouseButtonState, MouseInput, Positions,
     layout::{Dimension2D, Vector2D},
     render::Render,
@@ -65,21 +65,65 @@ impl Render for MacroquadRenderer {
                 let bg_color = container.config().background_color.into();
                 if let Some(border) = container.config.border {
                     let BorderWidth {
-                        left,
-                        right,
-                        top,
-                        bottom,
+                        left: left_border,
+                        right: right_border,
+                        top: top_border,
+                        bottom: bottom_border,
                     } = border.width;
 
+                    let left_border = left_border.unwrap_or_default();
+                    let right_border = right_border.unwrap_or_default();
+                    let top_border = top_border.unwrap_or_default();
+                    let bottom_border = bottom_border.unwrap_or_default();
+
                     draw_rectangle(
-                        x - left.unwrap_or_default(),
-                        y - top.unwrap_or_default(),
-                        width + left.unwrap_or_default() + right.unwrap_or_default(),
-                        height + top.unwrap_or_default() + bottom.unwrap_or_default(),
+                        x - left_border,
+                        y - top_border,
+                        width + left_border + right_border,
+                        height + top_border + bottom_border,
                         border.color.into(),
                     );
+                    match border.mode {
+                        crate::BorderMode::Outset => {
+                            draw_rectangle(
+                                x - left_border,
+                                y - top_border,
+                                width + left_border + right_border,
+                                height + top_border + bottom_border,
+                                border.color.into(),
+                            );
+                            draw_rectangle(x, y, width, height, bg_color);
+                        }
+                        crate::BorderMode::Inset => {
+                            draw_rectangle(x, y, width, height, border.color.into());
+                            draw_rectangle(
+                                x + left_border,
+                                y + top_border,
+                                width - left_border - right_border,
+                                height - top_border - bottom_border,
+                                bg_color,
+                            );
+                        }
+                        crate::BorderMode::Midset => {
+                            draw_rectangle(
+                                x - left_border / 2.0,
+                                y - top_border / 2.0,
+                                width + left_border / 2.0 + right_border / 2.0,
+                                height + top_border / 2.0 + bottom_border / 2.0,
+                                border.color.into(),
+                            );
+                            draw_rectangle(
+                                x + left_border / 2.0,
+                                y + top_border / 2.0,
+                                width - left_border / 2.0 - right_border / 2.0,
+                                height - top_border / 2.0 - bottom_border / 2.0,
+                                bg_color,
+                            );
+                        }
+                    }
+                } else {
+                    draw_rectangle(x, y, width, height, bg_color);
                 }
-                draw_rectangle(x, y, width, height, bg_color);
 
                 for child in element.children() {
                     self.draw_element(child);
