@@ -1,16 +1,14 @@
 use std::sync::{Arc, Mutex};
 
 use macroquad::{
-    color::{BLACK, BLUE, Color, PINK, RED, YELLOW},
+    color::{Color, BLACK, BLUE, PINK, RED, YELLOW},
     input::{
-        self, KeyCode, get_char_pressed, get_keys_down, get_keys_pressed, get_keys_released,
-        is_key_down, is_mouse_button_down, is_mouse_button_pressed, is_mouse_button_released,
-        mouse_delta_position, mouse_position,
+        self, get_char_pressed, get_keys_down, get_keys_pressed, get_keys_released, is_key_down, is_mouse_button_down, is_mouse_button_pressed, is_mouse_button_released, mouse_delta_position, mouse_position, KeyCode
     },
     math::Vec2,
     miniquad::window::screen_size,
-    shapes::{DrawRectangleParams, draw_poly, draw_rectangle, draw_rectangle_ex},
-    text::{TextParams, draw_text, draw_text_ex, measure_text},
+    shapes::{draw_arc, draw_circle, draw_poly, draw_rectangle, draw_rectangle_ex, DrawRectangleParams},
+    text::{draw_text, draw_text_ex, measure_text, TextParams},
     window::{clear_background, request_new_screen_size, screen_height, screen_width},
 };
 
@@ -86,6 +84,12 @@ impl Render for MacroquadRenderer {
         let Dimension2D { width, height } = dimensions;
 
         draw_rectangle(x, y, width, height, color.into());
+    }
+
+    fn draw_circle(&mut self, position: Point2D, radius: f32, color: RlayColor) {
+        let Point2D { x, y } = position;
+
+        draw_circle(x, y, radius, color.into());
     }
 
     fn next_input_state(&mut self, ctx: &mut AppCtx) -> InputState {

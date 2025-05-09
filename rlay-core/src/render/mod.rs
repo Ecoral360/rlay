@@ -8,7 +8,9 @@ use macroquad::text::measure_text;
 use crate::{
     AppCtx, AppState, BorderWidth, Color, ContainerConfig, ContainerElement, Dimension2D, Done,
     Element, ElementLayout, ImageConfig, ImageData, ImageElement, InputState, Point2D, TextConfig,
-    TextElement, app_ctx, calculate_layout, err::RlayError,
+    TextElement, app_ctx, calculate_layout,
+    colors::{BLUE, GREEN, PURPLE, RED, YELLOW},
+    err::RlayError,
 };
 
 mod commands;
@@ -22,7 +24,7 @@ pub trait Render {
 
     fn draw_rectangle(&mut self, position: Point2D, dimensions: Dimension2D, color: Color);
 
-    fn draw_circle(&mut self, position: Point2D, radius: f32) {}
+    fn draw_circle(&mut self, position: Point2D, radius: f32, color: Color);
 
     fn draw_text(
         &mut self,
@@ -42,7 +44,103 @@ pub trait Render {
             Element::Container(container) => {
                 let bg_color = container.config().background_color;
 
-                if let Some(border) = container.config.border {
+                // To draw rounded corners, we draw 4 rectangles in a "+" shape
+                // and 4 circles in the corners
+                if let Some(corner_radius) = container.config.corner_radius {
+                    let (corner_pos, corner_dim) = corner_radius.to_corner_layout();
+                    let (top_left, top_right, bottom_left, bottom_right) =
+                        corner_radius.to_tuple_capped(el_dim.width.min(el_dim.height) / 2.0);
+
+                    // ------- START draw the corners -------
+
+                    // We do this first, so they are drawn over by the rectangles
+
+                    // top left
+                    self.draw_circle(el_pos + Point2D::scalar(top_left), top_left, bg_color);
+
+                    // top right
+                    self.draw_circle(
+                        el_pos + Point2D::new(el_dim.width - top_right, top_right),
+                        top_right,
+                        bg_color,
+                    );
+
+                    // bottom left
+                    self.draw_circle(
+                        el_pos + Point2D::new(bottom_left, el_dim.height - bottom_left),
+                        bottom_left,
+                        bg_color,
+                    );
+
+                    // bottom right
+                    self.draw_circle(
+                        el_pos
+                            + Point2D::new(
+                                el_dim.width - bottom_right,
+                                el_dim.height - bottom_right,
+                            ),
+                        bottom_right,
+                        bg_color,
+                    );
+
+                    // ------- END draw the corners -------
+
+                    // draw the left rectangle
+                    self.draw_rectangle(
+                        el_pos + Point2D::new(0.0, top_left),
+                        Dimension2D::new(
+                            top_left.max(bottom_left),
+                            el_dim.height - top_left - bottom_left,
+                        ),
+                        bg_color,
+                    );
+
+                    // draw the right rectangle
+                    self.draw_rectangle(
+                        el_pos
+                            + Point2D::new(el_dim.width - top_right.max(bottom_right), top_right),
+                        Dimension2D::new(
+                            top_right.max(bottom_right),
+                            el_dim.height - top_right - bottom_right,
+                        ),
+                        bg_color,
+                    );
+
+                    // draw the top rectangle
+                    self.draw_rectangle(
+                        el_pos + Point2D::new(top_left, 0.0),
+                        Dimension2D::new(
+                            el_dim.width - top_left - top_right,
+                            top_left.max(top_right),
+                        ),
+                        bg_color,
+                    );
+
+                    // draw the bottom rectangle
+                    self.draw_rectangle(
+                        el_pos
+                            + Point2D::new(
+                                bottom_left,
+                                el_dim.height - bottom_left.max(bottom_right),
+                            ),
+                        Dimension2D::new(
+                            el_dim.width - bottom_left - bottom_right,
+                            bottom_left.max(bottom_right),
+                        ),
+                        bg_color,
+                    );
+
+                    // draw the center rectangle
+                    self.draw_rectangle(
+                        el_pos + Point2D::new(top_left.max(bottom_left), top_left.max(top_right)),
+                        el_dim
+                            - Dimension2D::new(
+                                top_left.max(bottom_left) + top_right.max(bottom_right),
+                                top_left.max(top_right) + bottom_left.max(bottom_right),
+                            ),
+                        bg_color,
+                    );
+                } else if let Some(border) = container.config.border {
                     let (border_pos, border_dim) = border.width.to_border_layout();
 
                     match border.mode {

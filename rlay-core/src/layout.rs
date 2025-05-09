@@ -39,6 +39,14 @@ impl Point2D {
     pub fn scalar(value: f32) -> Self {
         Self { x: value, y: value }
     }
+
+    pub fn with_x(self, value: f32) -> Self {
+        Self::new(value, self.y)
+    }
+
+    pub fn with_y(self, value: f32) -> Self {
+        Self::new(self.x, value)
+    }
 }
 
 impl Add for Point2D {
@@ -115,6 +123,14 @@ impl Dimension2D {
             width: self.width,
             height: min_max.clamp(self.height),
         }
+    }
+
+    pub fn with_width(self, value: f32) -> Self {
+        Self::new(value, self.height)
+    }
+
+    pub fn with_height(self, value: f32) -> Self {
+        Self::new(self.width, value)
     }
 }
 

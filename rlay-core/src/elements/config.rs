@@ -391,10 +391,10 @@ pub const corner_radius: CorderRadius = CorderRadius {
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct CorderRadius {
-    top_left: Option<f32>,
-    top_right: Option<f32>,
-    bottom_left: Option<f32>,
-    bottom_right: Option<f32>,
+    pub top_left: Option<f32>,
+    pub top_right: Option<f32>,
+    pub bottom_left: Option<f32>,
+    pub bottom_right: Option<f32>,
 }
 
 impl CorderRadius {
@@ -410,6 +410,37 @@ impl CorderRadius {
             bottom_left,
             bottom_right,
         }
+    }
+
+    pub fn to_tuple(self) -> (f32, f32, f32, f32) {
+        (
+            self.top_left.unwrap_or_default(),
+            self.top_right.unwrap_or_default(),
+            self.bottom_left.unwrap_or_default(),
+            self.bottom_right.unwrap_or_default(),
+        )
+    }
+
+    pub fn to_tuple_capped(self, max: f32) -> (f32, f32, f32, f32) {
+        (
+            self.top_left.unwrap_or_default().min(max),
+            self.top_right.unwrap_or_default().min(max),
+            self.bottom_left.unwrap_or_default().min(max),
+            self.bottom_right.unwrap_or_default().min(max),
+        )
+    }
+
+    pub fn to_corner_layout(self) -> (Point2D, Dimension2D) {
+        (
+            Point2D::new(
+                self.top_left.unwrap_or_default(),
+                self.top_left.unwrap_or_default(),
+            ),
+            Dimension2D::new(
+                self.top_left.unwrap_or_default() + self.top_right.unwrap_or_default(),
+                self.bottom_left.unwrap_or_default() + self.bottom_right.unwrap_or_default(),
+            ),
+        )
     }
 
     pub fn top_left(self, val: f32) -> Self {

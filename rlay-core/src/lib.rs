@@ -286,6 +286,10 @@ macro_rules! _rlay_field {
         Some($crate::corner_radius!($($val)*))
     };
 
+    (corner_radius = $val:expr) => {
+        Some($val.into())
+    };
+
     (angle = {$val:literal deg}) => {
         ($val as f32).to_radians()
     };
