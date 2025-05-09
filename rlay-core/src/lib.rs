@@ -46,7 +46,7 @@ macro_rules! rlay {
                 config
             };
 
-            $crate::_attrs!(attrs: $($($attrs)*)?);
+            $crate::_attrs!(view, attrs[id]: $($($attrs)*)?);
 
             $ctx.open_element(
                 $crate::Element::Container(
@@ -71,7 +71,7 @@ macro_rules! rlay {
                 config
             };
 
-            $crate::_attrs!(attrs: $($($attrs)*)?);
+            $crate::_attrs!(text, attrs[id]: $($($attrs)*)?);
 
             $ctx.open_element(
                 $crate::Element::Text(
@@ -96,7 +96,7 @@ macro_rules! rlay {
                 config
             };
 
-            $crate::_attrs!(attrs: $($($attrs:tt)*)?);
+            $crate::_attrs!(image, attrs[id]: $($($attrs:tt)*)?);
 
             $ctx.open_element(
                 $crate::Element::Image(
@@ -121,7 +121,7 @@ macro_rules! rlay {
                 config
             };
 
-            $crate::_attrs!(attrs: $($attrs:tt)*);
+            $crate::_attrs!(image, attrs[id, file_type]: $($attrs:tt)*);
 
             $ctx.open_element(
                 $crate::Element::Image(
@@ -143,10 +143,17 @@ macro_rules! rlay {
 
 #[macro_export]
 macro_rules! _attrs {
-    ($attrs:ident: $($attr:ident = $val:expr),* $(,)?) => {
+    ($el_type:ident, $attrs:ident[$($allowed_key:ident),*]: $($attr:ident = $val:expr),* $(,)?) => {
         let $attrs: ::std::collections::HashMap<String, String> = {
             let mut attrs = ::std::collections::HashMap::new();
-            $(attrs.insert(stringify!($attr).to_string(), $val.to_string());)*
+            let allowed_keys = [$(stringify!($allowed_key)),*];
+            let err_msg = stringify!([$($attr = $val),*]);
+            $({
+                if !allowed_keys.contains(&stringify!($attr)) {
+                    ::std::panic!("Unknown attribute key '{}' in element {}{}.", stringify!($attr).to_string(), stringify!($el_type), err_msg);
+                }
+                attrs.insert(stringify!($attr).to_string(), $val.to_string());
+            })*
             attrs
         };
     }
