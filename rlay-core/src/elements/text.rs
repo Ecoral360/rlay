@@ -8,7 +8,7 @@ use std::{
 use derive_more::From;
 use macroquad::text::measure_text;
 
-use crate::{Color, Dimension2D, Vector2D, err::RlayError};
+use crate::{Color, Dimension2D, Point2D, err::RlayError};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum WrapMode {

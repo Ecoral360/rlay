@@ -1,7 +1,7 @@
 use core::f32;
 use std::{
     marker::PhantomData,
-    ops::{Add, Not, Sub},
+    ops::{Add, Div, Mul, Not, Sub},
     rc::Weak,
     sync::{Arc, Mutex},
 };
@@ -26,40 +26,60 @@ macro_rules! def_states {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct Vector2D {
+pub struct Point2D {
     pub x: f32,
     pub y: f32,
 }
 
-impl Vector2D {
+impl Point2D {
     pub fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
+
+    pub fn scalar(value: f32) -> Self {
+        Self { x: value, y: value }
+    }
 }
 
-impl Add for Vector2D {
+impl Add for Point2D {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        Vector2D::new(self.x + rhs.x, self.y + rhs.y)
+        Point2D::new(self.x + rhs.x, self.y + rhs.y)
     }
 }
 
-impl Sub for Vector2D {
+impl Sub for Point2D {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Vector2D::new(self.x - rhs.x, self.y - rhs.y)
+        Point2D::new(self.x - rhs.x, self.y - rhs.y)
     }
 }
 
-impl From<(f32, f32)> for Vector2D {
+impl Mul for Point2D {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self::new(self.x * rhs.x, self.y * rhs.y)
+    }
+}
+
+impl Div for Point2D {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        Self::new(self.x / rhs.x, self.y / rhs.y)
+    }
+}
+
+impl From<(f32, f32)> for Point2D {
     fn from(value: (f32, f32)) -> Self {
         Self::new(value.0, value.1)
     }
 }
 
-impl From<[f32; 2]> for Vector2D {
+impl From<[f32; 2]> for Point2D {
     fn from(value: [f32; 2]) -> Self {
         Self::new(value[0], value[1])
     }
@@ -74,6 +94,13 @@ pub struct Dimension2D {
 impl Dimension2D {
     pub fn new(width: f32, height: f32) -> Self {
         Self { width, height }
+    }
+
+    pub fn scalar(value: f32) -> Self {
+        Self {
+            width: value,
+            height: value,
+        }
     }
 
     pub fn clamped_width(self, min_max: MinMax) -> Self {
@@ -91,7 +118,7 @@ impl Dimension2D {
     }
 }
 
-impl From<Dimension2D> for Vector2D {
+impl From<Dimension2D> for Point2D {
     fn from(value: Dimension2D) -> Self {
         Self::new(value.width, value.height)
     }
@@ -101,14 +128,31 @@ impl Add for Dimension2D {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        Dimension2D::new(self.width + rhs.width, self.height + rhs.height)
+        Self::new(self.width + rhs.width, self.height + rhs.height)
     }
 }
+
 impl Sub for Dimension2D {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Dimension2D::new(self.width - rhs.width, self.height - rhs.height)
+        Self::new(self.width - rhs.width, self.height - rhs.height)
+    }
+}
+
+impl Mul for Dimension2D {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self::new(self.width * rhs.width, self.height * rhs.height)
+    }
+}
+
+impl Div for Dimension2D {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        Self::new(self.width / rhs.width, self.height / rhs.height)
     }
 }
 
@@ -127,7 +171,7 @@ def_states! {
 #[derive(Debug)]
 pub struct ElementLayout<S: ElementStep> {
     _marker: PhantomData<S>,
-    position: Vector2D,
+    position: Point2D,
     dimensions: Dimension2D,
     element: Element,
 
@@ -136,7 +180,7 @@ pub struct ElementLayout<S: ElementStep> {
 
 impl<S: ElementStep> ElementLayout<S> {
     pub fn new(
-        position: Vector2D,
+        position: Point2D,
         dimensions: Dimension2D,
         config: Element,
         children: Box<[ElementLayout<S>]>,
@@ -152,7 +196,7 @@ impl<S: ElementStep> ElementLayout<S> {
 }
 
 impl<S: ElementStep> ElementLayout<S> {
-    pub fn position(&self) -> Vector2D {
+    pub fn position(&self) -> Point2D {
         self.position
     }
 
@@ -638,20 +682,20 @@ impl LayoutStep for ElementLayout<Positions> {
         if let Element::Container(ref container) = self.element {
             let config = container.config();
             struct Offsets {
-                offset: Vector2D,
+                offset: Point2D,
             }
 
             let offset = config.padding_in_axis() as f32;
 
             let mut step_ctx = config.layout_direction.value_on_axis(
                 Offsets {
-                    offset: Vector2D::new(
+                    offset: Point2D::new(
                         config.padding_in_axis() as f32,
                         config.padding_in_other_axis() as f32,
                     ),
                 },
                 Offsets {
-                    offset: Vector2D::new(
+                    offset: Point2D::new(
                         config.padding_in_other_axis() as f32,
                         config.padding_in_axis() as f32,
                     ),
@@ -668,7 +712,8 @@ impl LayoutStep for ElementLayout<Positions> {
                     .iter()
                     .map(|c| (c.dimensions.width * 100.0) as i32)
                     .max()
-                    .unwrap_or(0) as f32 / 100.0,
+                    .unwrap_or(0) as f32
+                    / 100.0,
             );
 
             match config.align.x {
@@ -686,7 +731,8 @@ impl LayoutStep for ElementLayout<Positions> {
                     .iter()
                     .map(|c| (c.dimensions.height * 100.0) as i32)
                     .max()
-                    .unwrap_or(0) as f32 / 100.0,
+                    .unwrap_or(0) as f32
+                    / 100.0,
                 self.children
                     .iter()
                     .map(|c| c.dimensions.height)
@@ -739,8 +785,8 @@ impl LayoutStep for ElementLayout<Positions> {
 
                     ctx.offset = ctx.offset
                         + config.layout_direction.value_on_axis(
-                            Vector2D::new(layout.dimensions.width + config.child_gap as f32, 0.0),
-                            Vector2D::new(0.0, layout.dimensions.height + config.child_gap as f32),
+                            Point2D::new(layout.dimensions.width + config.child_gap as f32, 0.0),
+                            Point2D::new(0.0, layout.dimensions.height + config.child_gap as f32),
                         );
 
                     Some(Ok(layout))

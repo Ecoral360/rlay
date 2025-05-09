@@ -3,26 +3,95 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use macroquad::text::measure_text;
+
 use crate::{
-    app_ctx, calculate_layout, err::RlayError, AppCtx, AppState, ContainerElement, Dimension2D, Done, ElementLayout, ImageElement, InputState, TextElement, Vector2D
+    AppCtx, AppState, BorderWidth, Color, ContainerConfig, ContainerElement, Dimension2D, Done,
+    Element, ElementLayout, ImageConfig, ImageData, ImageElement, InputState, Point2D, TextConfig,
+    TextElement, app_ctx, calculate_layout, err::RlayError,
 };
+
 mod commands;
 
 pub trait Render {
-    fn draw_rectangle(el: ElementLayout<Done>) {
-        todo!()
-    }
-
-    fn draw_text() {
-        todo!()
-    }
-
     fn setup(&mut self, ctx: &mut AppCtx);
 
     fn next_input_state(&mut self, ctx: &mut AppCtx) -> InputState;
 
     fn draw_root(&mut self, root: ElementLayout<Done>);
-    fn draw_element(&mut self, element: &ElementLayout<Done>);
+
+    fn draw_rectangle(&mut self, position: Point2D, dimensions: Dimension2D, color: Color);
+
+    fn draw_circle(&mut self, position: Point2D, radius: f32) {}
+
+    fn draw_text(
+        &mut self,
+        text: &str,
+        position: Point2D,
+        dimensions: Dimension2D,
+        config: &TextConfig,
+    );
+
+    fn draw_image(&mut self, data: &ImageData, position: Point2D, dimensions: Dimension2D) {}
+
+    fn draw_element(&mut self, element: &ElementLayout<Done>) {
+        let el_pos = element.position();
+        let el_dim = element.dimensions();
+
+        match element.data() {
+            Element::Container(container) => {
+                let bg_color = container.config().background_color;
+
+                if let Some(border) = container.config.border {
+                    let (border_pos, border_dim) = border.width.to_border_layout();
+
+                    match border.mode {
+                        crate::BorderMode::Outset => {
+                            self.draw_rectangle(
+                                el_pos - border_pos,
+                                el_dim + border_dim,
+                                border.color,
+                            );
+                            self.draw_rectangle(el_pos, el_dim, bg_color);
+                        }
+                        crate::BorderMode::Inset => {
+                            self.draw_rectangle(el_pos, el_dim, border.color);
+                            self.draw_rectangle(el_pos + border_pos, el_dim - border_dim, bg_color);
+                        }
+                        crate::BorderMode::Midset => {
+                            self.draw_rectangle(
+                                el_pos - border_pos / Point2D::scalar(2.0),
+                                el_dim + border_dim / Dimension2D::scalar(2.0),
+                                border.color,
+                            );
+                            self.draw_rectangle(
+                                el_pos + border_pos / Point2D::scalar(2.0),
+                                el_dim - border_dim / Dimension2D::scalar(2.0),
+                                bg_color,
+                            );
+                        }
+                    }
+                } else {
+                    self.draw_rectangle(el_pos, el_dim, bg_color);
+                }
+
+                for child in element.children() {
+                    self.draw_element(child);
+                }
+            }
+            Element::Text(text) => {
+                let text_dimensions = measure_text(text.data(), None, text.config().font_size, 1.0);
+
+                self.draw_text(
+                    text.data(),
+                    el_pos + Point2D::new(0.0, text_dimensions.height),
+                    el_dim,
+                    text.config(),
+                );
+            }
+            Element::Image(image) => todo!(),
+        }
+    }
 
     fn render<'a>(
         &mut self,
@@ -62,61 +131,3 @@ where
         (self)(ctx)
     }
 }
-
-
-pub trait Renderer2 {
-    fn draw_container(
-        &mut self,
-        element: &ContainerElement,
-        position: &Vector2D,
-        dimensions: &Dimension2D,
-    );
-    fn draw_text(&mut self, element: &TextElement, position: &Vector2D, dimensions: &Dimension2D);
-    fn draw_image(&mut self, element: &ImageElement, position: &Vector2D, dimensions: &Dimension2D);
-}
-
-// pub struct Renderer<'a, R: Render> {
-//     phantom: PhantomData<&'a R>,
-//     app_ctx: AppCtx,
-//     renderer: R,
-// }
-
-// impl<R: Render> From<R> for Renderer<'_, R> {
-//     fn from(value: R) -> Self {
-//         Self {
-//             renderer: value,
-//             phantom: PhantomData,
-//             app_ctx: AppCtx::new(),
-//         }
-//     }
-// }
-
-// impl<'a, R: Render> Renderer<'a, R> {
-//     pub fn next_frame(self) -> Self {
-//         Self {
-//             renderer: self.renderer,
-//             phantom: PhantomData,
-//             app_ctx: self.app_ctx.next_frame(),
-//         }
-//     }
-//
-//     pub fn render(&'a mut self, root_factory: impl RootFactory<'a>) -> Result<(), RlayError> {
-//         let ctx = &mut self.app_ctx;
-//
-//         self.renderer.setup(ctx);
-//
-//         self.renderer.update_input_state(ctx);
-//
-//         let ctx = root_factory.apply(ctx)?;
-//
-//         ctx.close_element();
-//
-//         let layout = calculate_layout(ctx.try_into()?)?;
-//
-//         ctx.update_hovered_elements(&layout);
-//
-//         self.renderer.draw_root(layout);
-//
-//         Ok(())
-//     }
-// }

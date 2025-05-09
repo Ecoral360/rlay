@@ -1,7 +1,9 @@
 mod container;
 mod image;
 mod text;
+mod config;
 
+pub use config::*;
 pub use container::*;
 pub use image::*;
 pub use text::*;
@@ -15,7 +17,7 @@ use std::{
 
 use derive_more::From;
 
-use crate::{Dimension2D, Vector2D, err::RlayError};
+use crate::{Dimension2D, Point2D, err::RlayError};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct MinMax {

@@ -3,7 +3,7 @@ use macroquad::text::{TextDimensions, measure_text};
 use crate::{
     AppState, Dimension2D, Done, Element, ElementLayout, ElementState, Event, FitSizingWidth,
     Initial, InputState, MinMax, MouseButtonState, PointerCaptureMode, Sizing, SizingAxis, Value,
-    Vector2D,
+    Point2D,
     err::RlayError,
     mem::{ArenaElement, ArenaTree, ElementNode, MemError},
 };
@@ -179,7 +179,7 @@ fn unpack_node(arena: &ArenaElement, node: Element) -> Result<ElementLayout<Init
             let children = arena.get_children_val(idx);
 
             Ok(ElementLayout::new(
-                Vector2D::default(),
+                Point2D::default(),
                 Dimension2D::new(width, height),
                 node.clone(),
                 children
@@ -201,7 +201,7 @@ fn unpack_node(arena: &ArenaElement, node: Element) -> Result<ElementLayout<Init
             } = measure_text(data, None, config.font_size, 1.0);
 
             Ok(ElementLayout::new(
-                Vector2D::default(),
+                Point2D::default(),
                 Dimension2D::new(width, height),
                 node.clone(),
                 Box::new([]),

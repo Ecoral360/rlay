@@ -8,7 +8,7 @@ use std::{
 
 use crate::{
     Dimension2D, Done, Element, ElementLayout, Event, FitSizingWidth, Initial, MinMax,
-    PointerCaptureMode, Sizing, SizingAxis, Vector2D,
+    PointerCaptureMode, Sizing, SizingAxis, Point2D,
     err::RlayError,
     mem::{ArenaElement, ArenaTree, ElementNode, MemError},
 };
@@ -193,7 +193,7 @@ impl AppState {
 
     pub fn set_input_state(&mut self, input_state: InputState) {
         self.input_state = input_state;
-        if self.input_state.mouse.mouse_position != Vector2D::new(0.0, 0.0) {
+        if self.input_state.mouse.mouse_position != Point2D::new(0.0, 0.0) {
             self.input_state_init = true;
         }
     }
@@ -222,7 +222,7 @@ impl AppState {
     // }
 }
 
-fn is_cursor_inside_rect(cursor: Vector2D, element: &ElementLayout<Done>) -> bool {
+fn is_cursor_inside_rect(cursor: Point2D, element: &ElementLayout<Done>) -> bool {
     cursor.x >= element.position().x
         && cursor.x <= element.position().x + element.dimensions().width
         && cursor.y >= element.position().y
@@ -240,8 +240,8 @@ pub enum MouseButtonState {
 
 #[derive(Default)]
 pub struct MouseInput {
-    pub mouse_position: Vector2D,
-    pub mouse_delta: Vector2D,
+    pub mouse_position: Point2D,
+    pub mouse_delta: Point2D,
     pub left_button: MouseButtonState,
     pub right_button: MouseButtonState,
     pub middle_button: MouseButtonState,

@@ -282,6 +282,14 @@ macro_rules! _rlay_field {
         Some($crate::border!($($val)*))
     };
 
+    (corner_radius = {$($val:tt)*}) => {
+        Some($crate::corner_radius!($($val)*))
+    };
+
+    (angle = {$val:literal deg}) => {
+        ($val as f32).to_radians()
+    };
+
     ($field:ident = $val:expr) => {
         $val.into()
     };
@@ -295,7 +303,21 @@ macro_rules! border {
 
     ($($field:ident = $val:expr),* $(,)?) => {
         $crate::BorderConfig {
-            $($field: $val,)*
+            $($field: $val.into(),)*
+            ..Default::default()
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! corner_radius {
+    () => {
+        $crate::BorderConfig::default()
+    };
+
+    ($($field:ident = $val:expr),* $(,)?) => {
+        $crate::BorderConfig {
+            $($field: $val.into(),)*
             ..Default::default()
         }
     };
