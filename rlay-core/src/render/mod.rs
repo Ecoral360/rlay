@@ -140,6 +140,7 @@ pub trait Render {
                             ),
                         bg_color,
                     );
+
                 } else if let Some(border) = container.config.border {
                     let (border_pos, border_dim) = border.width.to_border_layout();
 

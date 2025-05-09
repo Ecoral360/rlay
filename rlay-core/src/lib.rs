@@ -37,7 +37,7 @@ macro_rules! rlay_define {
 
 #[macro_export]
 macro_rules! rlay {
-    ($ctx:ident, view($($config:tt)*)) => {{
+    ($ctx:ident, view$([$($attrs:tt)*])?($($config:tt)*) $($child:block)?) => {{
         #[allow(clippy::needless_update)]
         {
             let config = {
@@ -46,74 +46,23 @@ macro_rules! rlay {
                 config
             };
 
-            $ctx.open_element(
-                $crate::Element::Container($crate::elements::ContainerElement::new(config, None))
-            );
-        }
-        {
-            $ctx.close_element();
-        }
-    }};
-    ($ctx:ident, view[id=$id:expr]($($config:tt)*)) => {{
-        #[allow(clippy::needless_update)]
-        {
-            let config = {
-                let mut config = $crate::ContainerConfig::default();
-                $crate::_rlay!(config; $($config)*);
-                config
-            };
+            $crate::_attrs!(attrs: $($($attrs)*)?);
 
             $ctx.open_element(
-                $crate::Element::Container($crate::elements::ContainerElement::new(config, Some($id.to_string())))
+                $crate::Element::Container(
+                    $crate::elements::ContainerElement::new(
+                        config,
+                        attrs.get(&"id".to_string()).cloned(),
+                    ))
             );
         }
-        {
-            $ctx.close_element();
-        }
-    }};
-    ($ctx:ident, view($($config:tt)*) $child:block) => {{
-        #[allow(clippy::needless_update)]
-        {
-            let config = {
-                let mut config = $crate::ContainerConfig::default();
-                $crate::_rlay!(config; $($config)*);
-                config
-            };
-
-            $ctx.open_element(
-                $crate::Element::Container($crate::elements::ContainerElement::new(config, None))
-            );
-        }
-        {
-            $child
-        }
+        $($child)?
         {
             $ctx.close_element();
         }
         }};
 
-    ($ctx:ident, view[id=$id:expr]($($config:tt)*) $child:block) => {{
-        #[allow(clippy::needless_update)]
-        {
-            let config = {
-                let mut config = $crate::ContainerConfig::default();
-                $crate::_rlay!(config; $($config)*);
-                config
-            };
-
-            $ctx.open_element(
-                $crate::Element::Container($crate::elements::ContainerElement::new(config, Some($id.to_string())))
-            );
-        }
-        {
-            $child
-        }
-        {
-            $ctx.close_element();
-        }
-        }};
-
-    ($ctx:ident, text($text:expr $(, $($config:tt)*)?)) => {{
+    ($ctx:ident, text$([$($attrs:tt)*])?($text:expr $(, $($config:tt)*)?)) => {{
         #[allow(clippy::needless_update)]
         {
             let text_config = {
@@ -122,12 +71,14 @@ macro_rules! rlay {
                 config
             };
 
+            $crate::_attrs!(attrs: $($($attrs)*)?);
+
             $ctx.open_element(
                 $crate::Element::Text(
                     $crate::elements::TextElement::new(
                         text_config,
                         $text.to_string(),
-                        None,
+                        attrs.get(&"id".to_string()).cloned(),
                     ))
             );
         }
@@ -136,21 +87,23 @@ macro_rules! rlay {
         }
     }};
 
-    ($ctx:ident, text[id=$id:expr]($text:expr $(, $($config:tt)*)?)) => {{
+    ($ctx:ident, image$([$($attrs:tt)*])?(file = $path:expr $(, $($config:tt)*)?)) => {{
         #[allow(clippy::needless_update)]
         {
-            let text_config = {
-                let mut config = $crate::TextConfig::default();
+            let img_config = {
+                let mut config = $crate::ImageConfig::default();
                 $crate::_rlay!(config; $($($config)*)?);
                 config
             };
 
+            $crate::_attrs!(attrs: $($($attrs:tt)*)?);
+
             $ctx.open_element(
-                $crate::Element::Text(
-                    $crate::elements::TextElement::new(
-                        text_config,
-                        $text.to_string(),
-                        Some($id.to_string()),
+                $crate::Element::Image(
+                    $crate::elements::ImageElement::new(
+                        img_config,
+                        $crate::ImageData::File {path: $path.to_string()},
+                        attrs.get(&"id".to_string()).cloned(),
                     ))
             );
         }
@@ -158,6 +111,45 @@ macro_rules! rlay {
             $ctx.close_element();
         }
     }};
+
+    ($ctx:ident, image[$($attrs:tt)*]($bytes:expr $(, $($config:tt)*)?)) => {{
+        #[allow(clippy::needless_update)]
+        {
+            let img_config = {
+                let mut config = $crate::ImageConfig::default();
+                $crate::_rlay!(config; $($($config)*)?);
+                config
+            };
+
+            $crate::_attrs!(attrs: $($attrs:tt)*);
+
+            $ctx.open_element(
+                $crate::Element::Image(
+                    $crate::elements::ImageElement::new(
+                        img_config,
+                        $crate::ImageData::Bytes {
+                            file_type: attrs.get("file_type").cloned().expect("You must specify the file_type attribute."),
+                            bytes: Box::new($bytes.into()),
+                        },
+                        attrs.get(&"id".to_string()).cloned(),
+                    ))
+            );
+        }
+        {
+            $ctx.close_element();
+        }
+    }};
+}
+
+#[macro_export]
+macro_rules! _attrs {
+    ($attrs:ident: $($attr:ident = $val:expr),* $(,)?) => {
+        let $attrs: ::std::collections::HashMap<String, String> = {
+            let mut attrs = ::std::collections::HashMap::new();
+            $(attrs.insert(stringify!($attr).to_string(), $val.to_string());)*
+            attrs
+        };
+    }
 }
 
 #[macro_export]

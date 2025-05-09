@@ -1,8 +1,6 @@
-use std::sync::Arc;
-
 use macroquad::{text::load_ttf_font, window::next_frame};
 use rlay_core::{
-    AppCtx, Padding, Render, calculate_layout,
+    AppCtx, Element, Padding, Render, calculate_layout,
     colors::{BLUE, GREEN, ORANGE, PINK, WHITE, YELLOW},
     err::RlayError,
     rlay, sizing, text,
@@ -36,7 +34,7 @@ fn test_create_element(ctx: &mut AppCtx) -> Result<&mut AppCtx, RlayError> {
                     padding = Padding::default().left(15).top(20),
                 )
             {
-                rlay!(ctx, text("Hello, world!", color = WHITE, font_name = "Futura"))
+                rlay!(ctx, text[id="test"]("Hello, world!", color = WHITE, font_name = "Futura"))
             }
             );
 
@@ -68,33 +66,19 @@ fn main() -> Result<(), RlayError> {
 #[cfg(feature = "macroquad")]
 #[macroquad::main("")]
 async fn main() -> Result<(), RlayError> {
-    use rlay_core::{AppState, Renderer, RootFactory, macroquad_renderer::MacroquadRenderer};
+    use rlay_core::macroquad_renderer::MacroquadRenderer;
 
-    // let mut renderer = MacroquadRenderer {};
-
-    // let font = load_ttf_font("/home/mathis/.local/share/fonts/Futura Medium.ttf")
-    //     .await
-    //     .unwrap();
-
-    let state = AppState::new();
+    let mut ctx = AppCtx::new();
     loop {
-        let mut renderer = Renderer::from(MacroquadRenderer {}, Arc::clone(&state));
-        renderer.render(test_create_element)?;
+        let mut renderer = MacroquadRenderer::default();
+        renderer.render(&mut ctx, test_create_element)?;
+
+        match ctx.get_element_with_id("test").unwrap() {
+            Element::Text(text_element) => {
+                println!("{}", text_element.data());
+            }
+            _ => panic!("Wrong type"),
+        }
         next_frame().await;
     }
-
-    // loop {
-    //     let mut ctx = AppCtx::new();
-    //     ctx.add_font("Futura".to_owned(), font.clone());
-    //
-    //     renderer.setup(&mut ctx);
-    //
-    //     let ctx = create_element(&mut ctx)?;
-    //
-    //     let layout = calculate_layout(ctx.try_into()?)?;
-    //
-    //     renderer.draw_root(layout);
-    //
-    //     next_frame().await
-    // }
 }
