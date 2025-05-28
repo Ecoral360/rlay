@@ -8,3 +8,8 @@ piet = "0.7.0"
 rlay-core = { path = "../rlay-core" }
 macroquad = "0.4.14"
 derive_more = { version = "2.0.1", features = ["from"] }
+
+[features]
+default = ["macroquad"]
+raylib = ["rlay-core/raylib"]
+macroquad = ["rlay-core/macroquad"]

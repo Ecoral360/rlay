@@ -1,5 +1,6 @@
 use core::f32;
 use std::{
+    fmt::Debug,
     marker::PhantomData,
     ops::{Add, RangeBounds},
     sync::{Arc, Mutex, Weak},
@@ -8,6 +9,13 @@ use std::{
 use derive_more::From;
 
 use crate::{Dimension2D, MinMax, Point2D, err::RlayError};
+
+pub trait Config: Clone + Debug {
+    type PartialConfig: Clone + Debug;
+
+    /// Merge two configs, the "other" config takes precedent
+    fn merge(&self, other: Self::PartialConfig) -> Self;
+}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SizingAxis {
@@ -310,10 +318,7 @@ impl BorderWidth {
 
     pub fn to_border_layout(self) -> (Point2D, Dimension2D) {
         (
-            Point2D::new(
-                self.left.unwrap_or_default(),
-                self.top.unwrap_or_default(),
-            ),
+            Point2D::new(self.left.unwrap_or_default(), self.top.unwrap_or_default()),
             Dimension2D::new(
                 self.left.unwrap_or_default() + self.right.unwrap_or_default(),
                 self.top.unwrap_or_default() + self.bottom.unwrap_or_default(),

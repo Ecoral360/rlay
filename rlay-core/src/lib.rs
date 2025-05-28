@@ -160,6 +160,22 @@ macro_rules! _attrs {
 }
 
 #[macro_export]
+macro_rules! _attrs2 {
+    ($el_type:ident, [$($allowed_key:ident: $allowed_key_type:ty = $def_val:expr),*]$(<$($gen:ident),+>)?$(where ($($where:tt)*))?: $($attr:ident = $val:expr),* $(,)?) => {{
+        struct Attrs$(<$($gen),+>)? $(where $($where)*)? { $($allowed_key: $allowed_key_type),* };
+
+        let mut attrs = Attrs {
+            $($allowed_key: $def_val),*
+        };
+
+        $(attrs.$attr = Some($val);)*
+
+        attrs
+    }}
+}
+
+
+#[macro_export]
 macro_rules! view_config {
     ($($config:tt)*) => {
         {

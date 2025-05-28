@@ -75,7 +75,9 @@ async fn main() -> Result<(), RlayError> {
 
         match ctx.get_element_with_id("test").unwrap() {
             Element::Text(text_element) => {
-                println!("{}", text_element.data());
+                if ctx.is_hovered(&text_element.id.clone().unwrap()) {
+                    println!("{}", text_element.data());
+                }
             }
             _ => panic!("Wrong type"),
         }
