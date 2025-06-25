@@ -72,6 +72,14 @@ impl AppCtx {
         self.state.is_clicked(element_id)
     }
 
+    pub fn is_pressed(&self, element_id: &str) -> bool {
+        self.state.is_pressed(element_id)
+    }
+
+    pub fn is_active(&self, element_id: &str) -> bool {
+        self.state.is_active(element_id)
+    }
+
     pub fn state(&self) -> &AppState {
         &self.state
     }

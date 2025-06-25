@@ -1,23 +1,12 @@
-use std::{
-    collections::{HashMap, HashSet},
-    default,
-    fmt::write,
-    marker::PhantomData,
-    sync::{Arc, LazyLock, Mutex},
-};
+use std::collections::{HashMap, HashSet};
 
-use crate::{
-    Dimension2D, Done, Element, ElementLayout, Event, FitSizingWidth, Initial, MinMax,
-    PointerCaptureMode, Sizing, SizingAxis, Point2D,
-    err::RlayError,
-    mem::{ArenaElement, ArenaTree, ElementNode, MemError},
-};
+use crate::{Done, ElementLayout, Point2D};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct ElementState {
     element_id: String,
-    is_hovered: bool,
     is_clicked: bool,
+    is_pressed: bool,
     is_right_clicked: bool,
     attrs: HashMap<String, String>,
     flags: HashMap<String, bool>,
@@ -32,8 +21,8 @@ impl ElementState {
     }
 
     fn reset(&mut self) {
-        self.is_hovered = false;
         self.is_clicked = false;
+        self.is_pressed = false;
         self.is_right_clicked = false;
     }
 
@@ -53,16 +42,19 @@ impl ElementState {
         self.flags.insert(k, value).unwrap_or(false)
     }
 
+    /// Clicked on the element
     pub fn is_clicked(&self) -> bool {
         self.is_clicked
     }
 
-    pub fn is_right_clicked(&self) -> bool {
-        self.is_right_clicked
+    /// Clicked and hold mouse down on element, if the mouse leaves and comes
+    /// back without letting go of the click, this triggers again on hover
+    pub fn is_pressed(&self) -> bool {
+        self.is_pressed
     }
 
-    pub fn is_hovered(&self) -> bool {
-        self.is_hovered
+    pub fn is_right_clicked(&self) -> bool {
+        self.is_right_clicked
     }
 }
 
@@ -77,17 +69,18 @@ pub enum Value {
 #[derive(Default)]
 pub struct AppState {
     hovered: HashSet<String>,
+    active: HashSet<String>,
     element_state: HashMap<String, ElementState>,
     input_state: InputState,
     input_state_init: bool,
 }
 
-fn get_or_insert(map: &mut HashMap<String, ElementState>, key: String) -> &ElementState {
-    if !map.contains_key(&key) {
-        map.insert(key.clone(), ElementState::new(key.clone()));
-    }
-    map.get(&key).unwrap()
-}
+// fn get_or_insert(map: &mut HashMap<String, ElementState>, key: String) -> &ElementState {
+//     if !map.contains_key(&key) {
+//         map.insert(key.clone(), ElementState::new(key.clone()));
+//     }
+//     map.get(&key).unwrap()
+// }
 
 fn get_mut_or_insert(map: &mut HashMap<String, ElementState>, key: String) -> &mut ElementState {
     if !map.contains_key(&key) {
@@ -109,14 +102,29 @@ impl AppState {
         for hovered in self.hovered.iter() {
             get_mut_or_insert(&mut self.element_state, hovered.to_owned()).reset();
         }
+
+        let left_clicked = self.input_state.mouse.left_button == MouseButtonState::Released;
+        let right_clicked = self.input_state.mouse.right_button == MouseButtonState::Released;
+        let pressed = self.input_state.mouse.left_button == MouseButtonState::Down;
+
+        if !pressed && !self.active.is_empty() {
+            self.active.clear();
+        }
+
         self.hovered.clear();
         self._update_hovered_elements(element);
+
         for hovered in self.hovered.iter() {
             let state = get_mut_or_insert(&mut self.element_state, hovered.to_owned());
-            state.is_hovered = true;
-            state.is_clicked = self.input_state.mouse.left_button == MouseButtonState::Pressed;
-            state.is_right_clicked =
-                self.input_state.mouse.right_button == MouseButtonState::Pressed;
+            state.is_clicked = left_clicked;
+
+            state.is_pressed = pressed;
+
+            if state.is_pressed {
+                self.active.insert(hovered.to_owned());
+            }
+
+            state.is_right_clicked = right_clicked;
         }
     }
 
@@ -136,15 +144,23 @@ impl AppState {
     }
 
     pub fn is_hovered(&self, element_id: &str) -> bool {
-        self.get_element_state(element_id)
-            .map(|state| state.is_hovered)
-            .unwrap_or(false)
+        self.hovered.contains(element_id)
     }
 
     pub fn is_clicked(&self, element_id: &str) -> bool {
         self.get_element_state(element_id)
             .map(|state| state.is_clicked)
             .unwrap_or(false)
+    }
+
+    pub fn is_pressed(&self, element_id: &str) -> bool {
+        self.get_element_state(element_id)
+            .map(|state| state.is_pressed)
+            .unwrap_or(false)
+    }
+
+    pub fn is_active(&self, element_id: &str) -> bool {
+        self.active.contains(element_id)
     }
 
     pub fn is_right_clicked(&self, element_id: &str) -> bool {

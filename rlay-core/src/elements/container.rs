@@ -64,6 +64,24 @@ impl From<PartialContainerConfig> for ContainerConfig {
     }
 }
 
+impl From<ContainerConfig> for PartialContainerConfig {
+    fn from(value: ContainerConfig) -> Self {
+        Self {
+            sizing: Some(value.sizing),
+            background_color: Some(value.background_color),
+            padding: Some(value.padding),
+            layout_direction: Some(value.layout_direction),
+            child_gap: Some(value.child_gap),
+            align: Some(value.align),
+            border: value.border,
+            corner_radius: value.corner_radius,
+            floating: value.floating,
+            scroll: Some(value.scroll),
+            pointer_capture: Some(value.pointer_capture),
+        }
+    }
+}
+
 impl From<Option<PartialContainerConfig>> for PartialContainerConfig {
     fn from(value: Option<PartialContainerConfig>) -> Self {
         value.unwrap_or_default()
@@ -73,7 +91,8 @@ impl From<Option<PartialContainerConfig>> for PartialContainerConfig {
 impl Config for ContainerConfig {
     type PartialConfig = PartialContainerConfig;
 
-    fn merge(&self, other: PartialContainerConfig) -> Self {
+    fn merge<P: Into<Self::PartialConfig>>(&self, other: P) -> Self {
+        let other = other.into();
         Self {
             sizing: other.sizing.unwrap_or(self.sizing),
             background_color: other.background_color.unwrap_or(self.background_color),

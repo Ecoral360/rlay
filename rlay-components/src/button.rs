@@ -30,8 +30,8 @@ where
 
     let c = view_config!(
         background_color = WHITE,
-        border = { color = BLACK, width = border_width.all(10.0) },
-        padding = padding.all(5)
+        border = { color = BLACK, width = border_width.all(1.0) },
+        padding = padding.all(0)
     )
     .merge(config.config);
 
@@ -56,16 +56,22 @@ where
 {
     let id = config.id.unwrap_or_else(|| ctx.get_local_id());
 
+    let mut c = view_config!(
+        background_color = WHITE,
+        border = { color = BLACK, width = border_width.all(1.0) },
+        padding = padding.all(5)
+    )
+    .merge(config.config);
+
     if ctx.is_clicked(&id) {
         on_click();
     }
 
-    let c = view_config!(
-        background_color = WHITE,
-        border = { color = BLACK, width = border_width.all(10.0) },
-        padding = padding.all(5)
-    )
-    .merge(config.config);
+    if ctx.is_active(&id) {
+        c = c.merge(view_config!(partial: {
+          border = { color = BLACK, width = border_width.all(2.0) }
+        }))
+    }
 
     rlay!(ctx, view[id = id](c) {
         rlay!(ctx, text(text));

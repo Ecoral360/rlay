@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 pub use app_ctx::*;
 pub use elements::*;
 pub use event::*;
@@ -161,7 +159,7 @@ macro_rules! _attrs {
 
 #[macro_export]
 macro_rules! _attrs2 {
-    ($el_type:ident, [$($allowed_key:ident: $allowed_key_type:ty = $def_val:expr),*]$(<$($gen:ident),+>)?$(where ($($where:tt)*))?: $($attr:ident = $val:expr),* $(,)?) => {{
+    ([$($allowed_key:ident: $allowed_key_type:ty = $def_val:expr),*]$(<$($gen:ident),+>)?$(where ($($where:tt)*))?: $($attr:ident = $val:expr),* $(,)?) => {{
         struct Attrs$(<$($gen),+>)? $(where $($where)*)? { $($allowed_key: $allowed_key_type),* };
 
         let mut attrs = Attrs {
@@ -174,9 +172,19 @@ macro_rules! _attrs2 {
     }}
 }
 
-
 #[macro_export]
 macro_rules! view_config {
+    (partial: {$($config:tt)*}) => {
+        {
+            #[allow(clippy::needless_update)]
+            {
+                let mut config = $crate::PartialContainerConfig::default();
+                $crate::_rlay!(config; $($config)*);
+                config
+            }
+        }
+    };
+
     ($($config:tt)*) => {
         {
             #[allow(clippy::needless_update)]
@@ -186,7 +194,7 @@ macro_rules! view_config {
                 config
             }
         }
-    }
+    };
 }
 
 #[macro_export]
@@ -222,7 +230,7 @@ macro_rules! view {
             );
         }
         {
-            $child
+            $child;
         }
         {
             $ctx.close_element();
@@ -260,12 +268,12 @@ macro_rules! _rlay {
     ($config:ident;) => {};
 
     ($config:ident; $field:ident = {$($val:tt)*} $(, $($($rest:tt)+)?)?) => {
-        $config.$field = $crate::_rlay_field!($field = {$($val)*});
+        $crate::_rlay_field_alias!($config.$field) = $crate::_rlay_field!($field = {$($val)*});
         $crate::_rlay!($config; $($($($rest)+)?)?)
     };
 
     ($config:ident; $field:ident = $val:expr $(, $($($rest:tt)+)?)?) => {
-        $config.$field = $crate::_rlay_field!($field = $val);
+        $crate::_rlay_field_alias!($config.$field) = $crate::_rlay_field!($field = $val);
         $crate::_rlay!($config; $($($($rest)+)?)?)
     };
 
@@ -273,6 +281,16 @@ macro_rules! _rlay {
         $config = $field;
     };
 
+}
+#[macro_export]
+macro_rules! _rlay_field_alias {
+    ($config:ident.bg) => {
+        $config.background_color
+    };
+
+    ($config:ident.$field:ident) => {
+        $config.$field
+    };
 }
 
 #[macro_export]

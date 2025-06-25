@@ -1,6 +1,11 @@
 use macroquad::window::next_frame;
 use rlay_components::rlay_comp;
-use rlay_core::{colors::{BLUE, ORANGE}, err::RlayError, rlay, sizing, AppCtx, Render};
+use rlay_core::{
+    AppCtx, Render,
+    colors::{BLUE, ORANGE},
+    err::RlayError,
+    rlay, sizing,
+};
 
 fn test_create_element(ctx: &mut AppCtx) -> Result<&mut AppCtx, RlayError> {
     let x = sizing!(50%, Grow);
@@ -13,9 +18,18 @@ fn test_create_element(ctx: &mut AppCtx) -> Result<&mut AppCtx, RlayError> {
             align = {},
           )
         {
-            rlay_comp!(ctx, button[on_click=||{
-                println!("hello");
-            }]("hey", background_color=ORANGE))?;
+            rlay!(ctx, view()
+                {
+                    rlay_comp!(ctx,
+                        button[on_click=|| {
+                            println!("hello");
+                        }](
+                          "hey",
+                          bg=ORANGE,
+                        )
+                    )?;
+                }
+            );
         }
     );
 

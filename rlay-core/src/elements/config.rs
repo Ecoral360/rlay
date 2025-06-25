@@ -14,7 +14,7 @@ pub trait Config: Clone + Debug {
     type PartialConfig: Clone + Debug;
 
     /// Merge two configs, the "other" config takes precedent
-    fn merge(&self, other: Self::PartialConfig) -> Self;
+    fn merge<P: Into<Self::PartialConfig>>(&self, other: P) -> Self;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -12,7 +12,13 @@ macro_rules! rlay_comp {
                 config
             };
 
-            let attrs = rlay_core::_attrs2!(button, [id: Option<S> = None as Option<String>, on_click: Option<F> = None as Option<fn()>]<F, S> where (F: Fn(), S: ToString): $($($attrs)*)?);
+            let attrs = rlay_core::_attrs2!(
+            [
+                id: Option<S> = None as Option<String>, 
+                on_click: Option<F> = None as Option<fn()>
+            ]
+            <F, S> where (F: Fn(), S: ToString): 
+            $($($attrs)*)?);
 
             match attrs.on_click {
                 None => {
