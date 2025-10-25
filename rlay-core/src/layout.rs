@@ -5,8 +5,7 @@ use std::{
 };
 
 use crate::{
-    Alignment, AppCtx, ContainerConfig, ContainerElement, Element, LayoutDirection, MinMax, Sizing,
-    SizingAxis, TextElement, WrapMode, err::RlayError,
+    err::RlayError, Alignment, AppCtx, ContainerConfig, ContainerElement, Element, LayoutAlignment, LayoutDirection, MinMax, Sizing, SizingAxis, TextElement, WrapMode
 };
 
 macro_rules! def_states {
@@ -733,6 +732,7 @@ impl LayoutStep for ElementLayout<Positions> {
         app_ctx: &AppCtx,
     ) -> Result<ElementLayout<Self::NextStep>, RlayError> {
         let parent_position = self.position;
+        let parent_dim = self.dimensions;
         let children;
 
         if let Element::Container(ref container) = self.element {
@@ -813,24 +813,42 @@ impl LayoutStep for ElementLayout<Positions> {
                     let offset = &ctx;
 
                     match config.align.x {
-                        Alignment::Start | Alignment::Center | Alignment::End => {
-                            child.position.x = (child.position + parent_position + offset.offset).x;
-                        }
                         Alignment::EndReverse => {
                             child.position.x = (child.position + parent_position - offset.offset).x
                                 + self.dimensions.width
                                 - child.dimensions.width;
                         }
+                        Alignment::Start => {
+                            child.position.x = (child.position + parent_position + offset.offset).x;
+                        }
+                        _ if config.layout_direction == LayoutDirection::LeftToRight => {
+                            child.position.x = (child.position + parent_position + offset.offset).x;
+                        }
+                        Alignment::End => {
+                            child.position.x = (child.position + parent_position + offset.offset).x + total_width - child.dimensions.width;
+                        }
+                        Alignment::Center => {
+                            child.position.x = (child.position + parent_position + offset.offset).x + (total_width - child.dimensions.width) / 2.0;
+                        }
                     }
 
                     match config.align.y {
-                        Alignment::Start | Alignment::End | Alignment::Center => {
-                            child.position.y = (child.position + parent_position + offset.offset).y;
-                        }
                         Alignment::EndReverse => {
                             child.position.y = (child.position + parent_position - offset.offset).y
                                 + self.dimensions.height
                                 - child.dimensions.height;
+                        }
+                        Alignment::Start => {
+                            child.position.y = (child.position + parent_position + offset.offset).y;
+                        }
+                        _ if config.layout_direction == LayoutDirection::TopToBottom => {
+                            child.position.y = (child.position + parent_position + offset.offset).y;
+                        }
+                        Alignment::End => {
+                            child.position.y = (child.position + parent_position + offset.offset).y + total_height - child.dimensions.height;
+                        }
+                        Alignment::Center => {
+                            child.position.y = (child.position + parent_position + offset.offset).y + (total_height - child.dimensions.height) / 2.0;
                         }
                     }
 
