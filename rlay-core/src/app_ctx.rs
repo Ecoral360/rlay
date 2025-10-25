@@ -213,7 +213,7 @@ fn unpack_node(ctx: &AppCtx, node: Element) -> Result<ElementLayout<Initial>, Rl
         }
 
         Element::Text(ref text) => {
-            let TextDimensions { width, height, .. } = (ctx.utils.measure_text)(text.data(), text.config());
+            let TextDimensions { width, height, offset_y } = (ctx.utils.measure_text)(text.data(), text.config());
 
             Ok(ElementLayout::new(
                 Point2D::default(),

@@ -482,13 +482,14 @@ impl LayoutStep for ElementLayout<WrapText> {
             .children
             .into_iter()
             .map(|child| {
+                let (position, dimensions) = (child.position, child.dimensions);
                 if let Element::Text(ref text) = child.element {
                     let element = resize_text(ctx, child, &self.dimensions, padding_x as f32);
 
                     return Ok(ElementLayout {
                         _marker: PhantomData,
-                        position: self.position,
-                        dimensions: self.dimensions,
+                        position,
+                        dimensions,
                         element: Element::Text(element),
                         children: Box::new([]),
                     });
@@ -865,49 +866,6 @@ impl LayoutStep for ElementLayout<Positions> {
     }
 }
 
-fn resize_text_slow(
-    ctx: &AppCtx,
-    element: &ElementLayout<WrapText>,
-    parent_dim: &Dimension2D,
-) -> String {
-    let Element::Text(text) = element.data() else {
-        unreachable!()
-    };
-    let text_dimensions = element.dimensions();
-
-    if text_dimensions.width < parent_dim.width {
-        return text.data().clone();
-    }
-
-    let space_len = (ctx.utils.measure_text)(" ", text.config()).width;
-
-    let max_width = parent_dim.width;
-    let data = text.data().clone();
-    let mut words = data.split(' ');
-    let mut new_data = String::with_capacity(data.len());
-    let mut curr_line_len = 0f32;
-    let mut line = String::new();
-    while let Some(word) = words.next() {
-        let word_len = (ctx.utils.measure_text)(word, text.config());
-        curr_line_len += space_len + word_len.width;
-
-        if curr_line_len > max_width && line.len() > 0 {
-            new_data += &line;
-            new_data.push('\n');
-            line.clear();
-            line.push_str(word);
-            curr_line_len = word_len.width;
-        } else {
-            line.push(' ');
-            line.push_str(word);
-        }
-    }
-
-    new_data.push_str(&line);
-
-    return new_data;
-}
-
 fn resize_text(
     ctx: &AppCtx,
     element: ElementLayout<WrapText>,
@@ -966,3 +924,47 @@ pub fn calculate_layout(
         .apply_layout_step(ctx)?
         .apply_layout_step(ctx)
 }
+
+fn resize_text_slow(
+    ctx: &AppCtx,
+    element: &ElementLayout<WrapText>,
+    parent_dim: &Dimension2D,
+) -> String {
+    let Element::Text(text) = element.data() else {
+        unreachable!()
+    };
+    let text_dimensions = element.dimensions();
+
+    if text_dimensions.width < parent_dim.width {
+        return text.data().clone();
+    }
+
+    let space_len = (ctx.utils.measure_text)(" ", text.config()).width;
+
+    let max_width = parent_dim.width;
+    let data = text.data().clone();
+    let mut words = data.split(' ');
+    let mut new_data = String::with_capacity(data.len());
+    let mut curr_line_len = 0f32;
+    let mut line = String::new();
+    while let Some(word) = words.next() {
+        let word_len = (ctx.utils.measure_text)(word, text.config());
+        curr_line_len += space_len + word_len.width;
+
+        if curr_line_len > max_width && line.len() > 0 {
+            new_data += &line;
+            new_data.push('\n');
+            line.clear();
+            line.push_str(word);
+            curr_line_len = word_len.width;
+        } else {
+            line.push(' ');
+            line.push_str(word);
+        }
+    }
+
+    new_data.push_str(&line);
+
+    return new_data;
+}
+

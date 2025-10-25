@@ -8,7 +8,7 @@ mod cli {
     use clap::Parser;
     use rlay_core::{Render, err::RlayError, macroquad_renderer::MacroquadRenderer};
 
-    use crate::examples::{Example, grows::grows_example};
+    use crate::examples::{Example, grows::grows_example, todo_app::todo_app_example};
 
     #[derive(Parser)]
     struct Cli {
@@ -22,6 +22,7 @@ mod cli {
         if let Some(example) = args.example {
             match example {
                 Example::Grows => MacroquadRenderer::render(grows_example).await?,
+                Example::Todo => MacroquadRenderer::render(todo_app_example).await?,
             };
         }
 
