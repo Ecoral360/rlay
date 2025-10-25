@@ -1,5 +1,4 @@
-use macroquad::window::next_frame;
-use rlay_core::{AppCtx, Element, Render, err::RlayError};
+use rlay_core::err::RlayError;
 
 #[cfg(feature = "examples")]
 mod examples;

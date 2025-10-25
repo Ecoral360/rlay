@@ -20,7 +20,7 @@ pub trait Render {
 
     fn next_input_state(&mut self, ctx: &mut AppCtx) -> InputState;
 
-    fn draw_root(&mut self, root: ElementLayout<Done>);
+    fn draw_root(&mut self, ctx: &AppCtx, root: ElementLayout<Done>);
 
     fn draw_rectangle(&mut self, position: Point2D, dimensions: Dimension2D, color: Color);
 
@@ -36,7 +36,11 @@ pub trait Render {
 
     fn draw_image(&mut self, data: &ImageData, position: Point2D, dimensions: Dimension2D) {}
 
-    fn draw_element(&mut self, element: &ElementLayout<Done>) {
+    fn draw_element(
+        &mut self,
+        ctx: &AppCtx,
+        element: &ElementLayout<Done>,
+    ) {
         let el_pos = element.position();
         let el_dim = element.dimensions();
 
@@ -174,11 +178,11 @@ pub trait Render {
                 }
 
                 for child in element.children() {
-                    self.draw_element(child);
+                    self.draw_element(ctx, child);
                 }
             }
             Element::Text(text) => {
-                let text_dimensions = measure_text(text.data(), None, text.config().font_size, 1.0);
+                let text_dimensions = element.dimensions();
 
                 self.draw_text(
                     text.data(),
@@ -207,11 +211,12 @@ pub trait Render {
 
         ctx.close_element();
 
-        let layout = calculate_layout((&mut ctx).try_into()?)?;
+        let elements = (&mut ctx).try_into()?;
+        let layout = calculate_layout(&ctx, elements)?;
 
         ctx.update_hovered_elements(&layout);
 
-        self.draw_root(layout);
+        self.draw_root(&ctx, layout);
 
         Ok(ctx)
     }

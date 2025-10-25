@@ -1,16 +1,12 @@
 use core::f32;
 use std::{
     marker::PhantomData,
-    ops::{Add, Div, Mul, Not, Sub},
-    rc::Weak,
-    sync::{Arc, Mutex},
+    ops::{Add, Div, Index, Mul, Not, Sub},
 };
 
 use crate::{
-    Alignment, AppCtx, ContainerConfig, ContainerElement, Element, LayoutAlignment,
-    LayoutDirection, MinMax, Sizing, SizingAxis, app_ctx,
-    err::RlayError,
-    mem::{ArenaElement, ElementNode},
+    Alignment, AppCtx, ContainerConfig, ContainerElement, Element, LayoutDirection, MinMax, Sizing,
+    SizingAxis, TextElement, WrapMode, err::RlayError,
 };
 
 macro_rules! def_states {
@@ -232,7 +228,7 @@ impl<S: ElementStep> ElementLayout<S> {
 trait LayoutStep {
     type NextStep: ElementStep;
 
-    fn apply_layout_step(self) -> Result<ElementLayout<Self::NextStep>, RlayError>;
+    fn apply_layout_step(self, ctx: &AppCtx) -> Result<ElementLayout<Self::NextStep>, RlayError>;
 }
 
 /// No op to let us change what the first step should be without having to
@@ -240,7 +236,7 @@ trait LayoutStep {
 impl LayoutStep for ElementLayout<Initial> {
     type NextStep = FitSizingWidth;
 
-    fn apply_layout_step(self) -> Result<ElementLayout<Self::NextStep>, RlayError> {
+    fn apply_layout_step(self, ctx: &AppCtx) -> Result<ElementLayout<Self::NextStep>, RlayError> {
         Ok(ElementLayout {
             _marker: PhantomData,
             position: self.position,
@@ -249,7 +245,7 @@ impl LayoutStep for ElementLayout<Initial> {
             children: self
                 .children
                 .into_iter()
-                .map(|child| child.apply_layout_step())
+                .map(|child| child.apply_layout_step(ctx))
                 .collect::<Result<_, _>>()?,
         })
     }
@@ -258,12 +254,12 @@ impl LayoutStep for ElementLayout<Initial> {
 impl LayoutStep for ElementLayout<FitSizingWidth> {
     type NextStep = GrowShrinkSizingWidth;
 
-    fn apply_layout_step(self) -> Result<ElementLayout<Self::NextStep>, RlayError> {
+    fn apply_layout_step(self, ctx: &AppCtx) -> Result<ElementLayout<Self::NextStep>, RlayError> {
         let children = self
             .children
             .into_iter()
             .rev()
-            .map(|child| child.apply_layout_step())
+            .map(|child| child.apply_layout_step(ctx))
             .collect::<Result<_, _>>()?;
 
         match self.element {
@@ -316,9 +312,9 @@ impl LayoutStep for ElementLayout<FitSizingWidth> {
 }
 
 impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
-    type NextStep = FitSizingHeight;
+    type NextStep = WrapText;
 
-    fn apply_layout_step(self) -> Result<ElementLayout<Self::NextStep>, RlayError> {
+    fn apply_layout_step(self, ctx: &AppCtx) -> Result<ElementLayout<Self::NextStep>, RlayError> {
         let mut old_children = self.children;
         let children;
 
@@ -368,7 +364,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
                                 ContainerConfig {
                                     sizing:
                                         Sizing {
-                                            width: SizingAxis::Grow(min_max),
+                                            width: SizingAxis::Grow(..),
                                             ..
                                         },
                                     ..
@@ -378,7 +374,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
                         {
                             child.dimensions.width = remaining_width;
                         }
-                        child.apply_layout_step()
+                        child.apply_layout_step(ctx)
                     })
                     .collect::<Result<Box<[_]>, _>>()?;
             } else {
@@ -429,7 +425,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
                         };
                         let config = container.config();
                         let max = config.sizing.width.get_max();
-                        let min = config.sizing.width.get_min();
+                        // let min = config.sizing.width.get_min();
 
                         if child.dimensions.width == smallest {
                             if child.dimensions.width + width_to_add > max {
@@ -452,15 +448,55 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
 
                 children = old_children
                     .into_iter()
-                    .map(|mut child| child.apply_layout_step())
+                    .map(|child| child.apply_layout_step(ctx))
                     .collect::<Result<Box<[_]>, _>>()?;
             }
         } else {
             children = old_children
                 .into_iter()
-                .map(|mut child| child.apply_layout_step())
+                .map(|child| child.apply_layout_step(ctx))
                 .collect::<Result<Box<[_]>, _>>()?;
         }
+
+        Ok(ElementLayout {
+            _marker: PhantomData,
+            position: self.position,
+            dimensions: self.dimensions,
+            element: self.element,
+            children,
+        })
+    }
+}
+
+impl LayoutStep for ElementLayout<WrapText> {
+    type NextStep = FitSizingHeight;
+
+    fn apply_layout_step(self, ctx: &AppCtx) -> Result<ElementLayout<Self::NextStep>, RlayError> {
+        let padding_x = if let Element::Container(c) = self.data() {
+            c.config().padding.val_x()
+        } else {
+            0
+        };
+
+        let children = self
+            .children
+            .into_iter()
+            .map(|child| {
+                if let Element::Text(ref text) = child.element {
+                    let element = resize_text(ctx, child, &self.dimensions, padding_x as f32);
+
+                    return Ok(ElementLayout {
+                        _marker: PhantomData,
+                        position: self.position,
+                        dimensions: self.dimensions,
+                        element: Element::Text(element),
+                        children: Box::new([]),
+                    });
+                }
+
+                child.apply_layout_step(ctx)
+            })
+            .collect::<Result<Box<[_]>, _>>()?;
 
         Ok(ElementLayout {
             _marker: PhantomData,
@@ -475,12 +511,12 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingWidth> {
 impl LayoutStep for ElementLayout<FitSizingHeight> {
     type NextStep = GrowShrinkSizingHeight;
 
-    fn apply_layout_step(self) -> Result<ElementLayout<Self::NextStep>, RlayError> {
+    fn apply_layout_step(self, ctx: &AppCtx) -> Result<ElementLayout<Self::NextStep>, RlayError> {
         let children = self
             .children
             .into_iter()
             .rev()
-            .map(|child| child.apply_layout_step())
+            .map(|child| child.apply_layout_step(ctx))
             .collect::<Result<Box<[_]>, _>>()?;
 
         match self.element {
@@ -535,7 +571,7 @@ impl LayoutStep for ElementLayout<FitSizingHeight> {
 impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
     type NextStep = Positions;
 
-    fn apply_layout_step(self) -> Result<ElementLayout<Self::NextStep>, RlayError> {
+    fn apply_layout_step(self, ctx: &AppCtx) -> Result<ElementLayout<Self::NextStep>, RlayError> {
         let mut old_children = self.children;
         let children;
 
@@ -585,7 +621,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
                                 ContainerConfig {
                                     sizing:
                                         Sizing {
-                                            height: SizingAxis::Grow(min_max),
+                                            height: SizingAxis::Grow(..),
                                             ..
                                         },
                                     ..
@@ -595,7 +631,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
                         {
                             child.dimensions.height = remaining_height;
                         }
-                        child.apply_layout_step()
+                        child.apply_layout_step(ctx)
                     })
                     .collect::<Result<Box<[_]>, _>>()?;
             } else {
@@ -646,7 +682,7 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
                         };
                         let config = container.config();
                         let max = config.sizing.height.get_max();
-                        let min = config.sizing.height.get_min();
+                        // let min = config.sizing.height.get_min();
 
                         if child.dimensions.height == smallest {
                             if child.dimensions.height + height_to_add > max {
@@ -668,13 +704,13 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
                 }
                 children = old_children
                     .into_iter()
-                    .map(|mut child| child.apply_layout_step())
+                    .map(|child| child.apply_layout_step(ctx))
                     .collect::<Result<Box<[_]>, _>>()?;
             }
         } else {
             children = old_children
                 .into_iter()
-                .map(|mut child| child.apply_layout_step())
+                .map(|child| child.apply_layout_step(ctx))
                 .collect::<Result<Box<[_]>, _>>()?;
         }
 
@@ -691,7 +727,10 @@ impl LayoutStep for ElementLayout<GrowShrinkSizingHeight> {
 impl LayoutStep for ElementLayout<Positions> {
     type NextStep = Done;
 
-    fn apply_layout_step(self) -> Result<ElementLayout<Self::NextStep>, RlayError> {
+    fn apply_layout_step(
+        self,
+        app_ctx: &AppCtx,
+    ) -> Result<ElementLayout<Self::NextStep>, RlayError> {
         let parent_position = self.position;
         let children;
 
@@ -701,7 +740,7 @@ impl LayoutStep for ElementLayout<Positions> {
                 offset: Point2D,
             }
 
-            let offset = config.padding_in_axis() as f32;
+            // let offset = config.padding_in_axis() as f32;
 
             let mut step_ctx = config.layout_direction.value_on_axis(
                 Offsets {
@@ -794,7 +833,7 @@ impl LayoutStep for ElementLayout<Positions> {
                         }
                     }
 
-                    let layout = child.apply_layout_step();
+                    let layout = child.apply_layout_step(app_ctx);
                     let Ok(layout) = layout else {
                         return Some(layout);
                     };
@@ -812,7 +851,7 @@ impl LayoutStep for ElementLayout<Positions> {
             children = self
                 .children
                 .into_iter()
-                .map(|child| child.apply_layout_step())
+                .map(|child| child.apply_layout_step(app_ctx))
                 .collect::<Result<Box<[_]>, _>>()?;
         }
 
@@ -826,11 +865,104 @@ impl LayoutStep for ElementLayout<Positions> {
     }
 }
 
-pub fn calculate_layout(root: ElementLayout<Initial>) -> Result<ElementLayout<Done>, RlayError> {
-    root.apply_layout_step()?
-        .apply_layout_step()?
-        .apply_layout_step()?
-        .apply_layout_step()?
-        .apply_layout_step()?
-        .apply_layout_step()
+fn resize_text_slow(
+    ctx: &AppCtx,
+    element: &ElementLayout<WrapText>,
+    parent_dim: &Dimension2D,
+) -> String {
+    let Element::Text(text) = element.data() else {
+        unreachable!()
+    };
+    let text_dimensions = element.dimensions();
+
+    if text_dimensions.width < parent_dim.width {
+        return text.data().clone();
+    }
+
+    let space_len = (ctx.utils.measure_text)(" ", text.config()).width;
+
+    let max_width = parent_dim.width;
+    let data = text.data().clone();
+    let mut words = data.split(' ');
+    let mut new_data = String::with_capacity(data.len());
+    let mut curr_line_len = 0f32;
+    let mut line = String::new();
+    while let Some(word) = words.next() {
+        let word_len = (ctx.utils.measure_text)(word, text.config());
+        curr_line_len += space_len + word_len.width;
+
+        if curr_line_len > max_width && line.len() > 0 {
+            new_data += &line;
+            new_data.push('\n');
+            line.clear();
+            line.push_str(word);
+            curr_line_len = word_len.width;
+        } else {
+            line.push(' ');
+            line.push_str(word);
+        }
+    }
+
+    new_data.push_str(&line);
+
+    return new_data;
+}
+
+fn resize_text(
+    ctx: &AppCtx,
+    element: ElementLayout<WrapText>,
+    parent_dim: &Dimension2D,
+    padding_x: f32,
+) -> TextElement {
+    let text_dimensions = element.dimensions();
+
+    let Element::Text(text) = element.element else {
+        unreachable!()
+    };
+    let wrap_mode = text.config().wrap_mode;
+
+    if wrap_mode == WrapMode::None || text_dimensions.width < parent_dim.width {
+        return text;
+    }
+
+    let space_len = (ctx.utils.measure_text)(" ", text.config()).width;
+
+    let max_width = parent_dim.width;
+    let config = text.config;
+    let id = text.id;
+    let mut data = text.data;
+
+    let mut curr_line_len = 0f32;
+    let mut curr_word_start = 0;
+
+    for idx in 0..data.len() {
+        if &data[idx..idx + 1] == " " {
+            let word = &data[curr_word_start..idx];
+            let word_len = (ctx.utils.measure_text)(word, &config);
+            curr_line_len += space_len + word_len.width;
+            if curr_line_len + padding_x > max_width && curr_word_start > 0 {
+                unsafe {
+                    data.as_mut_vec()[curr_word_start - 1] = b'\n';
+                }
+                curr_line_len = word_len.width;
+            }
+
+            curr_word_start = idx + 1;
+        }
+    }
+
+    TextElement::new(config, data, id)
+}
+
+pub fn calculate_layout(
+    ctx: &AppCtx,
+    root: ElementLayout<Initial>,
+) -> Result<ElementLayout<Done>, RlayError> {
+    root.apply_layout_step(ctx)?
+        .apply_layout_step(ctx)?
+        .apply_layout_step(ctx)?
+        .apply_layout_step(ctx)?
+        .apply_layout_step(ctx)?
+        .apply_layout_step(ctx)?
+        .apply_layout_step(ctx)
 }

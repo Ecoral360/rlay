@@ -1,22 +1,15 @@
 use macroquad::{
-    color::{BLACK, Color},
+    color::{Color, BLACK},
     input::{
-        self, KeyCode, get_char_pressed, get_keys_down, get_keys_pressed, get_keys_released,
-        is_key_down, is_mouse_button_down, is_mouse_button_pressed, is_mouse_button_released,
-        mouse_delta_position, mouse_position,
+        self, get_char_pressed, get_keys_down, get_keys_pressed, get_keys_released, is_key_down, is_mouse_button_down, is_mouse_button_pressed, is_mouse_button_released, mouse_delta_position, mouse_position, KeyCode
     },
     shapes::{draw_circle, draw_rectangle},
-    text::{TextParams, draw_text_ex},
+    text::{draw_multiline_text_ex, draw_text_ex, measure_text, TextParams},
     window::{clear_background, next_frame, screen_height, screen_width},
 };
 
 use crate::{
-    AppCtx, Color as RlayColor, ContainerConfig, ContainerElement, Done, Element, ElementLayout,
-    InputState, KeyboardInput, MouseButtonState, MouseInput, RootFactory,
-    err::RlayError,
-    layout::{Dimension2D, Point2D},
-    render::Render,
-    sizing,
+    err::RlayError, layout::{Dimension2D, Point2D}, render::Render, sizing, AppCtx, AppCtxUtils, Color as RlayColor, ContainerConfig, ContainerElement, Done, Element, ElementLayout, InputState, KeyboardInput, MouseButtonState, MouseInput, RootFactory, TextConfig, TextDimensions, TextElement
 };
 
 impl From<RlayColor> for Color {
@@ -41,7 +34,18 @@ impl Render for MacroquadRenderer {
     where
         R: RootFactory,
     {
-        let mut ctx = AppCtx::new();
+        let fns = AppCtxUtils {
+            measure_text: |text: &str, config: &TextConfig| -> TextDimensions {
+                let text_dim = measure_text(text, None, config.font_size, 1.0);
+                TextDimensions {
+                    width: text_dim.width,
+                    height: text_dim.height,
+                    offset_y: text_dim.offset_y,
+                }
+            },
+        };
+
+        let mut ctx = AppCtx::new(fns);
         loop {
             let mut renderer = MacroquadRenderer::default();
             ctx = renderer
@@ -74,11 +78,11 @@ impl Render for MacroquadRenderer {
         ctx.open_element(screen_root);
     }
 
-    fn draw_root(&mut self, root: ElementLayout<Done>) {
+    fn draw_root(&mut self, ctx: &AppCtx, root: ElementLayout<Done>) {
         self.current_angle = 0.0;
 
         clear_background(BLACK);
-        self.draw_element(&root);
+        self.draw_element(ctx, &root);
     }
 
     fn draw_text(
@@ -89,12 +93,13 @@ impl Render for MacroquadRenderer {
         config: &crate::TextConfig,
     ) {
         let Point2D { x, y } = position;
-        // let Dimension2D { width, height } = dimensions;
+        let Dimension2D { width, height } = dimensions;
 
-        draw_text_ex(
+        draw_multiline_text_ex(
             text,
             x,
             y,
+            None,
             TextParams {
                 font_size: config.font_size,
                 color: config.color.into(),

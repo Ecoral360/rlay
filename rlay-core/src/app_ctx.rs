@@ -1,23 +1,28 @@
-use macroquad::text::{TextDimensions, measure_text};
-
 use crate::{
-    AppState, Dimension2D, Done, Element, ElementLayout, ElementState, Event, FitSizingWidth,
-    Initial, InputState, MinMax, MouseButtonState, Point2D, PointerCaptureMode, Sizing, SizingAxis,
-    Value,
-    err::RlayError,
-    mem::{ArenaElement, ArenaTree, ElementNode, MemError},
+    AppState, Dimension2D, Done, Element, ElementLayout, ElementState, Initial, InputState, MinMax,
+    Point2D, Sizing, SizingAxis, TextConfig, TextDimensions, err::RlayError,
+    mem::ArenaElement,
 };
 
-#[derive(Default)]
 pub struct AppCtx {
     parent_stack: Vec<usize>,
     elements: ArenaElement,
     state: AppState,
+    pub utils: AppCtxUtils,
+}
+
+pub struct AppCtxUtils {
+    pub measure_text: fn(&str, &TextConfig) -> TextDimensions,
 }
 
 impl AppCtx {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(fns: AppCtxUtils) -> Self {
+        Self {
+            parent_stack: vec![],
+            elements: ArenaElement::default(),
+            state: AppState::default(),
+            utils: fns,
+        }
     }
 
     pub fn get_local_id(&self) -> String {
@@ -168,11 +173,12 @@ impl TryFrom<&mut AppCtx> for ElementLayout<Initial> {
             .get_val(root)
             .ok_or(RlayError::ElementNotFound)?;
 
-        unpack_node(&value.elements, root_value.clone())
+        unpack_node(value, root_value.clone())
     }
 }
 
-fn unpack_node(arena: &ArenaElement, node: Element) -> Result<ElementLayout<Initial>, RlayError> {
+fn unpack_node(ctx: &AppCtx, node: Element) -> Result<ElementLayout<Initial>, RlayError> {
+    let arena = &ctx.elements;
     match node {
         Element::Container(ref container) => {
             let config = container.config();
@@ -201,20 +207,13 @@ fn unpack_node(arena: &ArenaElement, node: Element) -> Result<ElementLayout<Init
                 children
                     .unwrap_or_default()
                     .into_iter()
-                    .map(|child| unpack_node(arena, child.clone()))
+                    .map(|child| unpack_node(ctx, child.clone()))
                     .collect::<Result<Box<[_]>, _>>()?,
             ))
         }
 
         Element::Text(ref text) => {
-            let data = text.data();
-            let config = text.config();
-
-            let TextDimensions {
-                width,
-                height,
-                offset_y,
-            } = measure_text(data, None, config.font_size, 1.0);
+            let TextDimensions { width, height, .. } = (ctx.utils.measure_text)(text.data(), text.config());
 
             Ok(ElementLayout::new(
                 Point2D::default(),
