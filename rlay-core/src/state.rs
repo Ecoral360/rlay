@@ -1,6 +1,11 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::{Arc, Mutex},
+};
 
-use crate::{Done, Element, ElementLayout, Point2D};
+use derive_more::From;
+
+use crate::{AppCtx, Done, Element, ElementLayout, Point2D};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct ElementState {
@@ -58,12 +63,57 @@ impl ElementState {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, From)]
 pub enum Value {
     String(String),
     Bool(bool),
     Int(i32),
     Float(f32),
+    Array(Vec<Value>),
+    Object(HashMap<String, Value>),
+}
+
+impl Value {
+    pub fn str<S: ToString>(s: S) -> Self {
+        Self::String(s.to_string())
+    }
+
+    pub fn obj<E: Into<Vec<(K, V)>>, K: ToString, V: Into<Value>>(entries: E) -> Self {
+        Self::Object(HashMap::from_iter(
+            entries
+                .into()
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v.into())),
+        ))
+    }
+
+    pub fn unwrap_arr(&self) -> &Vec<Value> {
+        match self {
+            Self::Array(v) => v,
+            _ => panic!("not an array"),
+        }
+    }
+
+    pub fn unwrap_obj(&self) -> &HashMap<String, Value> {
+        match self {
+            Self::Object(o) => o,
+            _ => panic!("not an object"),
+        }
+    }
+
+    pub fn unwrap_string(&self) -> &String {
+        match self {
+            Self::String(s) => s,
+            _ => panic!("not a string"),
+        }
+    }
+    
+    pub fn unwrap_bool(&self) -> bool {
+        match self {
+            Self::Bool(b) => *b,
+            _ => panic!("not a boolean"),
+        }
+    }
 }
 
 #[derive(Default)]
@@ -75,6 +125,8 @@ pub struct AppState {
     element_state: HashMap<String, ElementState>,
     input_state: InputState,
     input_state_init: bool,
+
+    store: Arc<Mutex<HashMap<String, Value>>>,
 }
 
 // fn get_or_insert(map: &mut HashMap<String, ElementState>, key: String) -> &ElementState {
@@ -94,6 +146,10 @@ fn get_mut_or_insert(map: &mut HashMap<String, ElementState>, key: String) -> &m
 impl AppState {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn store(&self) -> Arc<Mutex<HashMap<String, Value>>> {
+        Arc::clone(&self.store)
     }
 
     pub(crate) fn update_hovered_elements(&mut self, element: &ElementLayout<Done>) {
@@ -301,4 +357,33 @@ pub struct KeyboardInput {
 pub struct InputState {
     pub mouse: MouseInput,
     pub keyboard: KeyboardInput,
+}
+
+pub struct UseState {
+    key: String,
+    store: Arc<Mutex<HashMap<String, Value>>>,
+}
+
+impl UseState {
+    pub fn new(key: String, ctx: &AppCtx, default_val: fn() -> Value) -> Self {
+        let store = ctx.store();
+        let mut store = store.lock().unwrap();
+        if store.get(&key).is_none() {
+            store.insert(key.clone(), (default_val)());
+        }
+        Self {
+            key,
+            store: ctx.store(),
+        }
+    }
+
+    pub fn get(&self) -> Value {
+        let store = &self.store;
+        store.lock().unwrap().get(&self.key).unwrap().clone()
+    }
+
+    pub fn set(&self, val: Value) {
+        let store = &self.store;
+        store.lock().unwrap().insert(self.key.clone(), val);
+    }
 }

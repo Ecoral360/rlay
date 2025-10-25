@@ -1,6 +1,8 @@
+use std::{collections::HashMap, sync::{Arc, Mutex}};
+
 use crate::{
     AppState, Dimension2D, Done, Element, ElementLayout, ElementState, Initial, InputState, MinMax,
-    Point2D, Sizing, SizingAxis, TextConfig, TextDimensions, err::RlayError,
+    Point2D, Sizing, SizingAxis, TextConfig, TextDimensions, Value, err::RlayError,
     mem::ArenaElement,
 };
 
@@ -126,6 +128,10 @@ impl AppCtx {
             .ok_or(RlayError::ElementNotFound)
     }
 
+    pub fn store(&self) -> Arc<Mutex<HashMap<String, Value>>> {
+        self.state.store()
+    }
+
     pub fn elements(&self) -> &ArenaElement {
         &self.elements
     }
@@ -213,10 +219,14 @@ fn unpack_node(ctx: &AppCtx, node: Element) -> Result<ElementLayout<Initial>, Rl
         }
 
         Element::Text(ref text) => {
-            let TextDimensions { width, height, offset_y } = (ctx.utils.measure_text)(text.data(), text.config());
+            let TextDimensions {
+                width,
+                height,
+                offset_y,
+            } = (ctx.utils.measure_text)(text.data(), text.config());
 
             Ok(ElementLayout::new(
-                Point2D::default(),
+                Point2D::new(0.0, offset_y),
                 Dimension2D::new(width, height),
                 node.clone(),
                 Box::new([]),

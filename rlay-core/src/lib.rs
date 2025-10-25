@@ -34,6 +34,36 @@ macro_rules! rlay_define {
 }
 
 #[macro_export]
+macro_rules! useState {
+    ($ctx:ident, $default_val:expr) => {{
+        let key = format!("{}:{}", file!(), line!());
+        &mut $crate::UseState::new(key, &$ctx, || $default_val.into())
+    }};
+}
+
+#[macro_export]
+macro_rules! value {
+    ({ $($key:literal : $val:expr),* $(,)? }) => {{
+        let mut map = ::std::collections::HashMap::new();
+        {$(
+            map.insert($key.to_string(), $val.into());
+        )*}
+        $crate::Value::Object(map)
+    }};
+    ([$($val:expr),* $(,)?]) => {{
+        let mut v = Vec::new();
+        {$(
+            v.push($val.into());
+        )*}
+        $crate::Value::Array(v)
+    }};
+
+    ($val:expr) => {{
+        Value::From($val)
+    }};
+}
+
+#[macro_export]
 macro_rules! rlay {
     ($ctx:ident, view$([$($attrs:tt)*])?($($config:tt)*) $($child:block)?) => {{
         #[allow(clippy::needless_update)]

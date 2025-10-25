@@ -6,7 +6,7 @@ use super::{
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct ContainerConfig {
     pub sizing: Sizing,
-    pub background_color: Color,
+    pub background_color: Option<Color>,
     pub padding: Padding,
     pub layout_direction: LayoutDirection,
     pub child_gap: i32,
@@ -41,7 +41,7 @@ impl From<PartialContainerConfig> for ContainerConfig {
     fn from(value: PartialContainerConfig) -> Self {
         Self {
             sizing: value.sizing.unwrap_or_default(),
-            background_color: value.background_color.unwrap_or_default(),
+            background_color: value.background_color,
             padding: value.padding.unwrap_or_default(),
             layout_direction: value.layout_direction.unwrap_or_default(),
             child_gap: value.child_gap.unwrap_or_default(),
@@ -60,7 +60,7 @@ impl From<ContainerConfig> for PartialContainerConfig {
     fn from(value: ContainerConfig) -> Self {
         Self {
             sizing: Some(value.sizing),
-            background_color: Some(value.background_color),
+            background_color: value.background_color,
             padding: Some(value.padding),
             layout_direction: Some(value.layout_direction),
             child_gap: Some(value.child_gap),
@@ -88,7 +88,7 @@ impl Config for ContainerConfig {
         let other = other.into();
         Self {
             sizing: other.sizing.unwrap_or(self.sizing),
-            background_color: other.background_color.unwrap_or(self.background_color),
+            background_color: other.background_color.or(self.background_color),
             padding: other.padding.unwrap_or(self.padding),
             layout_direction: other.layout_direction.unwrap_or(self.layout_direction),
             child_gap: other.child_gap.unwrap_or(self.child_gap),
