@@ -1,0 +1,64 @@
+use rlay_core::{
+    AppCtx, Padding,
+    colors::{BLUE, ORANGE, PINK, WHITE, YELLOW},
+    err::RlayError,
+    rlay, sizing,
+};
+
+pub fn grows_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
+    let x = sizing!(50%, Grow);
+
+    let ctx = &mut app_ctx;
+    rlay!(ctx, view(
+            background_color = BLUE,
+            padding = [32, 32, 32, 32],
+            child_gap = 32,
+            sizing = { Grow, Grow },
+            align = {},
+          )
+        {
+            rlay!(ctx, view[id="pink-box"](
+                background_color = PINK,
+                sizing = x,
+            ));
+
+            rlay!(ctx, view(
+                background_color = YELLOW,
+                sizing = {Grow(20.0 .. 200.0), Grow}
+            ));
+
+            rlay!(ctx,
+                view(
+                    background_color = ORANGE,
+                    sizing = {Grow, Grow},
+                    padding = Padding::default().left(15).top(20),
+                )
+            {
+                rlay!(ctx, text[id="test"]("Hello, world!", color = WHITE, font_name = "Futura"))
+            }
+            );
+
+            rlay!(ctx, view(
+                background_color = WHITE,
+                sizing = {width = Fixed(150), height = Fixed(150)}
+            ));
+        }
+    );
+
+    // get_root().ok_or(RlayError::NoRoot)
+    // ctx.get_root().ok_or(RlayError::NoRoot)
+    Ok(app_ctx)
+}
+
+fn create_element(ctx: &mut AppCtx) -> Result<&mut AppCtx, RlayError> {
+    Ok(ctx)
+}
+
+#[cfg(feature = "raylib")]
+fn main() -> Result<(), RlayError> {
+    use rlay_core::{Renderer, raylib_renderer::RaylibRenderer};
+
+    let renderer = RlayRender::from(RaylibRenderer::new());
+
+    renderer.render(|ctx| create_element(ctx))
+}

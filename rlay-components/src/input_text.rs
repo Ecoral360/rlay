@@ -15,8 +15,8 @@ where
 {
     let id = ctx.get_local_id();
 
-    if ctx.is_clicked(&id) {
-        ctx.set_flag(&id, "focus", true);
+    if ctx.is_clicked(&id) && !ctx.is_focused(&id) {
+        ctx.set_focused(Some(id.clone()));
     } else if ctx.get_input_state().mouse.left_button == MouseButtonState::Pressed {
         ctx.set_flag(&id, "focus", false);
     }
@@ -32,7 +32,8 @@ where
     let c = view_config!(
         background_color = WHITE,
         border = border,
-        padding = padding.all(5)
+        padding = padding.all(5),
+        focusable = true,
     );
 
     let mut value = ctx.get_attr(&id, "value").cloned().unwrap_or_default();

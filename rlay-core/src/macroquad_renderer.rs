@@ -1,20 +1,19 @@
-use std::sync::{Arc, Mutex};
-
 use macroquad::{
-    color::{Color, BLACK, BLUE, PINK, RED, YELLOW},
+    color::{BLACK, Color},
     input::{
-        self, get_char_pressed, get_keys_down, get_keys_pressed, get_keys_released, is_key_down, is_mouse_button_down, is_mouse_button_pressed, is_mouse_button_released, mouse_delta_position, mouse_position, KeyCode
+        self, KeyCode, get_char_pressed, get_keys_down, get_keys_pressed, get_keys_released,
+        is_key_down, is_mouse_button_down, is_mouse_button_pressed, is_mouse_button_released,
+        mouse_delta_position, mouse_position,
     },
-    math::Vec2,
-    miniquad::window::screen_size,
-    shapes::{draw_arc, draw_circle, draw_poly, draw_rectangle, draw_rectangle_ex, DrawRectangleParams},
-    text::{draw_text, draw_text_ex, measure_text, TextParams},
-    window::{clear_background, request_new_screen_size, screen_height, screen_width},
+    shapes::{draw_circle, draw_rectangle},
+    text::{TextParams, draw_text_ex},
+    window::{clear_background, next_frame, screen_height, screen_width},
 };
 
 use crate::{
-    AppCtx, BorderWidth, Color as RlayColor, ContainerConfig, ContainerElement, Done, Element,
-    ElementLayout, InputState, KeyboardInput, MouseButtonState, MouseInput, Positions,
+    AppCtx, Color as RlayColor, ContainerConfig, ContainerElement, Done, Element, ElementLayout,
+    InputState, KeyboardInput, MouseButtonState, MouseInput, RootFactory,
+    err::RlayError,
     layout::{Dimension2D, Point2D},
     render::Render,
     sizing,
@@ -38,8 +37,33 @@ pub struct MacroquadRenderer {
 }
 
 impl Render for MacroquadRenderer {
+    async fn render<R>(root_factory: R) -> Result<(), RlayError>
+    where
+        R: RootFactory,
+    {
+        let mut ctx = AppCtx::new();
+        loop {
+            let mut renderer = MacroquadRenderer::default();
+            ctx = renderer
+                .render_frame(ctx, root_factory.clone())
+                .expect("error when rendering frame");
+
+            next_frame().await;
+        }
+    }
+    // async fn render<'a, R>(ctx: &mut AppCtx, root_factory: R) -> ! where R: RootFactory<'a> {
+    //     loop {
+    //         let mut renderer = MacroquadRenderer::default();
+    //         renderer
+    //             .render_frame(ctx, root_factory.clone())
+    //             .expect("error when rendering frame");
+    //
+    //         next_frame().await;
+    //     }
+    // }
+
     fn setup(&mut self, ctx: &mut AppCtx) {
-        let mut screen_root = Element::Container(ContainerElement::new(
+        let screen_root = Element::Container(ContainerElement::new(
             ContainerConfig {
                 sizing: sizing!(Fixed(screen_width()), Fixed(screen_height())),
                 ..Default::default()
@@ -65,7 +89,7 @@ impl Render for MacroquadRenderer {
         config: &crate::TextConfig,
     ) {
         let Point2D { x, y } = position;
-        let Dimension2D { width, height } = dimensions;
+        // let Dimension2D { width, height } = dimensions;
 
         draw_text_ex(
             text,

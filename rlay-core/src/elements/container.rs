@@ -1,14 +1,3 @@
-use core::f32;
-use std::{
-    marker::PhantomData,
-    ops::{Add, RangeBounds},
-    sync::{Arc, Mutex, Weak},
-};
-
-use derive_more::From;
-
-use crate::{Dimension2D, MinMax, Point2D, err::RlayError};
-
 use super::{
     Alignment, BorderConfig, Color, Config, CorderRadius, FloatingConfig, LayoutAlignment,
     LayoutDirection, Padding, PointerCaptureMode, ScrollConfig, Sizing,
@@ -28,6 +17,7 @@ pub struct ContainerConfig {
     pub floating: Option<FloatingConfig>,
     pub scroll: ScrollConfig,
     pub pointer_capture: PointerCaptureMode,
+    pub focusable: bool,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -44,6 +34,7 @@ pub struct PartialContainerConfig {
     pub floating: Option<FloatingConfig>,
     pub scroll: Option<ScrollConfig>,
     pub pointer_capture: Option<PointerCaptureMode>,
+    pub focusable: Option<bool>,
 }
 
 impl From<PartialContainerConfig> for ContainerConfig {
@@ -60,6 +51,7 @@ impl From<PartialContainerConfig> for ContainerConfig {
             floating: value.floating,
             scroll: value.scroll.unwrap_or_default(),
             pointer_capture: value.pointer_capture.unwrap_or_default(),
+            focusable: value.focusable.unwrap_or_default(),
         }
     }
 }
@@ -78,6 +70,7 @@ impl From<ContainerConfig> for PartialContainerConfig {
             floating: value.floating,
             scroll: Some(value.scroll),
             pointer_capture: Some(value.pointer_capture),
+            focusable: Some(value.focusable),
         }
     }
 }
@@ -105,6 +98,7 @@ impl Config for ContainerConfig {
             floating: other.floating.or(self.floating),
             scroll: other.scroll.unwrap_or(self.scroll),
             pointer_capture: other.pointer_capture.unwrap_or(self.pointer_capture),
+            focusable: other.focusable.unwrap_or(self.focusable),
         }
     }
 }
@@ -119,7 +113,6 @@ impl ContainerConfig {
             },
             LayoutDirection::TopToBottom => match self.align.y {
                 Alignment::Start => self.padding.top,
-                Alignment::End => self.padding.bottom,
                 Alignment::End | Alignment::EndReverse => self.padding.bottom,
                 Alignment::Center => self.padding.top,
             },

@@ -140,7 +140,6 @@ pub trait Render {
                             ),
                         bg_color,
                     );
-
                 } else if let Some(border) = container.config.border {
                     let (border_pos, border_dim) = border.width.to_border_layout();
 
@@ -192,41 +191,45 @@ pub trait Render {
         }
     }
 
-    fn render<'a>(
+    fn render_frame<'a>(
         &mut self,
-        ctx: &'a mut AppCtx,
-        root_factory: impl RootFactory<'a>,
-    ) -> Result<(), RlayError> {
+        mut ctx: AppCtx,
+        root_factory: impl RootFactory,
+    ) -> Result<AppCtx, RlayError> {
         ctx.clear();
 
-        self.setup(ctx);
+        self.setup(&mut ctx);
 
-        let input_state = self.next_input_state(ctx);
+        let input_state = self.next_input_state(&mut ctx);
         ctx.set_input_state(input_state);
 
-        let ctx = root_factory.apply(ctx)?;
+        let mut ctx = root_factory.apply(ctx)?;
 
         ctx.close_element();
 
-        let layout = calculate_layout(ctx.try_into()?)?;
+        let layout = calculate_layout((&mut ctx).try_into()?)?;
 
         ctx.update_hovered_elements(&layout);
 
         self.draw_root(layout);
 
-        Ok(())
+        Ok(ctx)
     }
+
+    async fn render<R>(root_factory: R) -> Result<(), RlayError>
+    where
+        R: RootFactory;
 }
 
-pub trait RootFactory<'a> {
-    fn apply(&self, ctx: &'a mut AppCtx) -> Result<&'a mut AppCtx, RlayError>;
+pub trait RootFactory: Clone {
+    fn apply(&self, ctx: AppCtx) -> Result<AppCtx, RlayError>;
 }
 
-impl<'a, F> RootFactory<'a> for F
+impl<F> RootFactory for F
 where
-    F: Fn(&'a mut AppCtx) -> Result<&'a mut AppCtx, RlayError>,
+    F: Clone + Fn(AppCtx) -> Result<AppCtx, RlayError>,
 {
-    fn apply(&self, ctx: &'a mut AppCtx) -> Result<&'a mut AppCtx, RlayError> {
+    fn apply(&self, ctx: AppCtx) -> Result<AppCtx, RlayError> {
         (self)(ctx)
     }
 }

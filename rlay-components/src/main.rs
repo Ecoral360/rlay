@@ -46,7 +46,7 @@ async fn main() -> Result<(), RlayError> {
     let mut ctx = AppCtx::new();
     loop {
         let mut renderer = MacroquadRenderer::default();
-        renderer.render(&mut ctx, test_create_element)?;
+        renderer.render_frame(&mut ctx, test_create_element)?;
         next_frame().await;
     }
 }

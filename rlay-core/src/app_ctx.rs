@@ -2,8 +2,8 @@ use macroquad::text::{TextDimensions, measure_text};
 
 use crate::{
     AppState, Dimension2D, Done, Element, ElementLayout, ElementState, Event, FitSizingWidth,
-    Initial, InputState, MinMax, MouseButtonState, PointerCaptureMode, Sizing, SizingAxis, Value,
-    Point2D,
+    Initial, InputState, MinMax, MouseButtonState, Point2D, PointerCaptureMode, Sizing, SizingAxis,
+    Value,
     err::RlayError,
     mem::{ArenaElement, ArenaTree, ElementNode, MemError},
 };
@@ -78,6 +78,14 @@ impl AppCtx {
 
     pub fn is_active(&self, element_id: &str) -> bool {
         self.state.is_active(element_id)
+    }
+
+    pub fn is_focused(&self, element_id: &str) -> bool {
+        self.state.is_focused(element_id)
+    }
+
+    pub fn set_focused(&mut self, element_id: Option<String>) {
+        self.state.set_focused(element_id);
     }
 
     pub fn state(&self) -> &AppState {

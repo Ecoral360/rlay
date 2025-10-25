@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::{Done, ElementLayout, Point2D};
+use crate::{Done, Element, ElementLayout, Point2D};
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct ElementState {
@@ -70,6 +70,8 @@ pub enum Value {
 pub struct AppState {
     hovered: HashSet<String>,
     active: HashSet<String>,
+    focusable: HashSet<String>,
+    focused: Option<String>,
     element_state: HashMap<String, ElementState>,
     input_state: InputState,
     input_state_init: bool,
@@ -112,6 +114,7 @@ impl AppState {
         }
 
         self.hovered.clear();
+        self.focusable.clear();
         self._update_hovered_elements(element);
 
         for hovered in self.hovered.iter() {
@@ -129,6 +132,16 @@ impl AppState {
     }
 
     fn _update_hovered_elements(&mut self, element: &ElementLayout<Done>) {
+        match element.data() {
+            &Element::Container(ref container) => {
+                let config = container.config();
+                if config.focusable && element.data().id().is_some() {
+                    self.focusable
+                        .insert(element.data().id().unwrap().to_owned());
+                }
+            }
+            _ => {}
+        }
         if is_cursor_inside_rect(self.input_state.mouse.mouse_position, element) {
             // if !self.hovered.is_empty() {
             //     return;
@@ -167,6 +180,14 @@ impl AppState {
         self.get_element_state(element_id)
             .map(|state| state.is_right_clicked)
             .unwrap_or(false)
+    }
+
+    pub fn is_focused(&self, element_id: &str) -> bool {
+        self.focused.as_ref().is_some_and(|id| id == element_id)
+    }
+
+    pub fn set_focused(&mut self, element_id: Option<String>) {
+        self.focused = element_id;
     }
 
     pub fn get_element_state(&self, element_id: &str) -> Option<&ElementState> {
