@@ -79,8 +79,7 @@ macro_rules! rlay {
                         attrs.get(&"id".to_string()).cloned(),
                     ))
             );
-        }
-        {
+
             $ctx.close_element();
         }
     }};

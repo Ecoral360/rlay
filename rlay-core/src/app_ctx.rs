@@ -179,14 +179,14 @@ impl TryFrom<&mut AppCtx> for ElementLayout<Initial> {
             .get_val(root)
             .ok_or(RlayError::ElementNotFound)?;
 
-        unpack_node(value, root_value.clone())
+        unpack_node(value, root_value)
     }
 }
 
-fn unpack_node(ctx: &AppCtx, node: Element) -> Result<ElementLayout<Initial>, RlayError> {
+fn unpack_node(ctx: &AppCtx, node: &Element) -> Result<ElementLayout<Initial>, RlayError> {
     let arena = &ctx.elements;
     match node {
-        Element::Container(ref container) => {
+        Element::Container(container) => {
             let config = container.config();
             let Sizing { width, height } = config.sizing;
 
@@ -213,12 +213,12 @@ fn unpack_node(ctx: &AppCtx, node: Element) -> Result<ElementLayout<Initial>, Rl
                 children
                     .unwrap_or_default()
                     .into_iter()
-                    .map(|child| unpack_node(ctx, child.clone()))
+                    .map(|child| unpack_node(ctx, child))
                     .collect::<Result<Box<[_]>, _>>()?,
             ))
         }
 
-        Element::Text(ref text) => {
+        Element::Text(text) => {
             let TextDimensions {
                 width,
                 height,

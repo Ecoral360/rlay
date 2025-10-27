@@ -1,11 +1,12 @@
 use core::f32;
 use std::{
     marker::PhantomData,
-    ops::{Add, Div, Index, Mul, Not, Sub},
+    ops::{Add, Div, Mul, Not, Sub},
 };
 
 use crate::{
-    err::RlayError, Alignment, AppCtx, ContainerConfig, ContainerElement, Element, LayoutAlignment, LayoutDirection, MinMax, Sizing, SizingAxis, TextElement, WrapMode
+    Alignment, AppCtx, ContainerConfig, ContainerElement, Element, LayoutDirection, MinMax, Sizing,
+    SizingAxis, TextElement, WrapMode, err::RlayError,
 };
 
 macro_rules! def_states {
@@ -482,7 +483,7 @@ impl LayoutStep for ElementLayout<WrapText> {
             .into_iter()
             .map(|child| {
                 let (position, dimensions) = (child.position, child.dimensions);
-                if let Element::Text(ref text) = child.element {
+                if let Element::Text(..) = child.element {
                     let element = resize_text(ctx, child, &self.dimensions, padding_x as f32);
 
                     return Ok(ElementLayout {
@@ -732,7 +733,7 @@ impl LayoutStep for ElementLayout<Positions> {
         app_ctx: &AppCtx,
     ) -> Result<ElementLayout<Self::NextStep>, RlayError> {
         let parent_position = self.position;
-        let parent_dim = self.dimensions;
+        // let parent_dim = self.dimensions;
         let children;
 
         if let Element::Container(ref container) = self.element {
@@ -825,10 +826,13 @@ impl LayoutStep for ElementLayout<Positions> {
                             child.position.x = (child.position + parent_position + offset.offset).x;
                         }
                         Alignment::End => {
-                            child.position.x = (child.position + parent_position + offset.offset).x + total_width - child.dimensions.width;
+                            child.position.x = (child.position + parent_position + offset.offset).x
+                                + total_width
+                                - child.dimensions.width;
                         }
                         Alignment::Center => {
-                            child.position.x = (child.position + parent_position + offset.offset).x + (total_width - child.dimensions.width) / 2.0;
+                            child.position.x = (child.position + parent_position + offset.offset).x
+                                + (total_width - child.dimensions.width) / 2.0;
                         }
                     }
 
@@ -845,10 +849,13 @@ impl LayoutStep for ElementLayout<Positions> {
                             child.position.y = (child.position + parent_position + offset.offset).y;
                         }
                         Alignment::End => {
-                            child.position.y = (child.position + parent_position + offset.offset).y + total_height - child.dimensions.height;
+                            child.position.y = (child.position + parent_position + offset.offset).y
+                                + total_height
+                                - child.dimensions.height;
                         }
                         Alignment::Center => {
-                            child.position.y = (child.position + parent_position + offset.offset).y + (total_height - child.dimensions.height) / 2.0;
+                            child.position.y = (child.position + parent_position + offset.offset).y
+                                + (total_height - child.dimensions.height) / 2.0;
                         }
                     }
 
@@ -927,7 +934,7 @@ fn resize_text(
         }
     }
 
-    TextElement::new(config, data, id)
+    TextElement::new(config, data, Some(id))
 }
 
 pub fn calculate_layout(
@@ -943,6 +950,7 @@ pub fn calculate_layout(
         .apply_layout_step(ctx)
 }
 
+#[allow(unused)]
 fn resize_text_slow(
     ctx: &AppCtx,
     element: &ElementLayout<WrapText>,
@@ -985,4 +993,3 @@ fn resize_text_slow(
 
     return new_data;
 }
-

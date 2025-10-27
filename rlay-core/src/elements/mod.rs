@@ -1,7 +1,7 @@
+mod config;
 mod container;
 mod image;
 mod text;
-mod config;
 
 pub use config::*;
 pub use container::*;
@@ -9,15 +9,7 @@ pub use image::*;
 pub use text::*;
 
 use core::f32;
-use std::{
-    marker::PhantomData,
-    ops::RangeBounds,
-    sync::{Arc, Mutex, Weak},
-};
-
-use derive_more::From;
-
-use crate::{Dimension2D, Point2D, err::RlayError};
+use std::ops::RangeBounds;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct MinMax {
@@ -78,7 +70,7 @@ impl Element {
         Self::Text(TextElement::new(config, data, id))
     }
 
-    pub fn id(&self) -> Option<&String> {
+    pub fn id(&self) -> &String {
         match self {
             Element::Container(container_element) => container_element.id(),
             Element::Text(text_element) => text_element.id(),

@@ -1,11 +1,11 @@
 use rlay_core::{
-    AppCtx, LayoutDirection, MouseButtonState, Padding,
+    AppCtx, LayoutDirection, MouseButtonState, Padding, StateValue,
     colors::{BLACK, DARKGRAY, LIGHTGRAY, WHITE},
     err::RlayError,
     rlay, useState,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Todo {
     completed: bool,
     title: String,
@@ -16,10 +16,16 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
 
     let todos = useState!(
         ctx,
-        vec![Todo {
-            completed: false,
-            title: "devoir".to_string()
-        }]
+        vec![
+            Todo {
+                completed: false,
+                title: "devoir".to_string()
+            },
+            Todo {
+                completed: false,
+                title: "test".to_string()
+            }
+        ]
     );
 
     let new_todo = useState!(ctx, String::new());
@@ -45,7 +51,6 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
             layout_direction = LayoutDirection::TopToBottom
         ) {
             let todos_arr = todos.get();
-            let todos_arr = todos_arr;
             for (i, todo) in todos_arr.iter().enumerate() {
                 let completed = todo.completed;
                 let title = todo.title.clone();
@@ -66,7 +71,7 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
                         }
                     ));
                     rlay!(ctx, text(title, font_size = 24 as u16));
-                })
+                });
             }
         });
 
@@ -80,19 +85,7 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
         }
 
         rlay!(ctx, view(sizing = { 50%, Fit }) {
-            rlay!(ctx, view[id="new-todo-input"](
-                sizing = {Grow, Grow},
-                background_color = if new_todo_is_focused { LIGHTGRAY } else { WHITE },
-                border = {
-                    color = BLACK,
-                    width = 1.0,
-                }
-            ) {
-                if ctx.state().is_clicked("new-todo-input") {
-                    ctx.set_focused(Some(String::from("new-todo-input")));
-                }
-                rlay!(ctx, text(input_text, font_size = 24 as u16));
-            });
+            text_input(ctx, new_todo)?;
 
             rlay!(ctx, view[id="add-todo"](
                 padding = Padding::default().x(20).y(6),
@@ -123,4 +116,50 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
     // get_root().ok_or(RlayError::NoRoot)
     // ctx.get_root().ok_or(RlayError::NoRoot)
     Ok(app_ctx)
+}
+
+fn text_input(ctx: &mut AppCtx, input_state: &mut StateValue<String>) -> Result<(), RlayError> {
+    let id = ctx.get_local_id();
+    let is_focused = ctx.is_focused(&id);
+    let input_text = input_state.get();
+
+    if is_focused {
+        if let Some(chr) = ctx.get_input_state().keyboard.last_char_pressed {
+            match chr {
+                '\n' | '\r' => {
+                    ctx.set_focused(None);
+                }
+                '\x08' => {
+                    if !input_text.is_empty() {
+                        input_state.set(format!("{}", &input_text[..input_text.len() - 1]));
+                    }
+                }
+                _ => {
+                    input_state.set(format!("{}{}", input_text, chr));
+                }
+            }
+        }
+    }
+
+    rlay!(ctx, view[id=&id](
+        sizing = {Grow, Grow},
+        align = { y = Center },
+        padding = Padding::default().left(5),
+        background_color = if is_focused { LIGHTGRAY } else { WHITE },
+        border = {
+            color = BLACK,
+            width = 1.0,
+        }
+    ) {
+        if ctx.state().is_clicked(&id) {
+            ctx.set_focused(Some(id));
+        }
+        if is_focused {
+            rlay!(ctx, text(format!("{}|", input_text), font_size = 24 as u16));
+        } else {
+            rlay!(ctx, text(input_text, font_size = 24 as u16));
+        }
+    });
+
+    Ok(())
 }

@@ -44,9 +44,9 @@ where
         self.arena.get(idx).is_some()
     }
 
-    fn get_mut(&mut self, idx: usize) -> Option<&mut Node<T>> {
-        self.arena.get_mut(idx)
-    }
+    // fn get_mut(&mut self, idx: usize) -> Option<&mut Node<T>> {
+    //     self.arena.get_mut(idx)
+    // }
 }
 
 impl<T> ArenaTree<T>
@@ -160,14 +160,14 @@ impl<T> Node<T>
 where
     T: PartialEq,
 {
-    pub fn new(idx: usize, val: T) -> Self {
-        Self {
-            idx,
-            val,
-            parent: None,
-            children: vec![],
-        }
-    }
+    // pub fn new(idx: usize, val: T) -> Self {
+    //     Self {
+    //         idx,
+    //         val,
+    //         parent: None,
+    //         children: vec![],
+    //     }
+    // }
 
     fn new_with_parent(idx: usize, val: T, parent: Option<usize>) -> Self {
         Self {
@@ -183,13 +183,13 @@ where
     }
 }
 
-pub type ElementNode = Node<Element>;
+// pub type ElementNode = Node<Element>;
 pub type ArenaElement = ArenaTree<Element>;
 
 impl ArenaElement {
     pub fn get_element_with_id(&self, id: &str) -> Option<&Element> {
         for el in self.arena.iter() {
-            if el.val.id().is_some_and(|el_id| el_id == id) {
+            if el.val.id() == id {
                 return Some(&el.val);
             }
         }

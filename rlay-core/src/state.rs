@@ -140,9 +140,8 @@ impl AppState {
         match element.data() {
             &Element::Container(ref container) => {
                 let config = container.config();
-                if config.focusable && element.data().id().is_some() {
-                    self.focusable
-                        .insert(element.data().id().unwrap().to_owned());
+                if config.focusable {
+                    self.focusable.insert(element.data().id().to_owned());
                 }
             }
             _ => {}
@@ -151,9 +150,7 @@ impl AppState {
             // if !self.hovered.is_empty() {
             //     return;
             // }
-            if let Some(id) = element.data().id() {
-                self.hovered.insert(id.to_string());
-            }
+            self.hovered.insert(element.data().id().to_string());
 
             for child in element.children() {
                 self._update_hovered_elements(child);
@@ -361,13 +358,13 @@ impl Value {
     }
 }
 
-pub struct UseState<T: Clone> {
+pub struct StateValue<T: Clone> {
     key: String,
     store: Arc<Mutex<HashMap<String, Box<dyn Any>>>>,
     phantom: PhantomData<T>,
 }
 
-impl<T: Clone + 'static> UseState<T> {
+impl<T: Clone + 'static> StateValue<T> {
     pub fn new<F>(key: String, ctx: &AppCtx, default_val: F) -> Self
     where
         F: Fn() -> T,
@@ -422,10 +419,9 @@ macro_rules! useState {
     //     let key = format!("{}:{}", file!(), line!());
     //     &mut $crate::UseState::new(key, &$ctx, move || v)
     // }};
-
     ($ctx:ident, $default_val:expr) => {{
         let key = format!("{}:{}", file!(), line!());
-        &mut $crate::UseState::new(key, &$ctx, || $default_val)
+        &mut $crate::StateValue::new(key, &$ctx, || $default_val)
     }};
 }
 

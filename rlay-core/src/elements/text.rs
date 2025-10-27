@@ -1,3 +1,5 @@
+use rand::RngCore;
+
 use crate::Color;
 use core::f32;
 
@@ -47,7 +49,7 @@ impl Default for TextConfig {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TextElement {
-    pub id: Option<String>,
+    pub id: String,
     pub config: TextConfig,
     pub data: String,
 }
@@ -60,7 +62,11 @@ pub struct TextDimensions {
 
 impl TextElement {
     pub fn new(config: TextConfig, data: String, id: Option<String>) -> Self {
-        Self { config, data, id }
+        Self {
+            config,
+            data,
+            id: id.unwrap_or_else(|| rand::rng().next_u64().to_string()),
+        }
     }
 
     pub fn config(&self) -> &TextConfig {
@@ -71,7 +77,7 @@ impl TextElement {
         &self.data
     }
 
-    pub fn id(&self) -> Option<&String> {
-        self.id.as_ref()
+    pub fn id(&self) -> &String {
+        &self.id
     }
 }

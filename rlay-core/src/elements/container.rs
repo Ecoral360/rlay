@@ -1,3 +1,5 @@
+use rand::RngCore;
+
 use super::{
     Alignment, BorderConfig, Color, Config, CorderRadius, FloatingConfig, LayoutAlignment,
     LayoutDirection, Padding, PointerCaptureMode, ScrollConfig, Sizing,
@@ -137,20 +139,23 @@ impl ContainerConfig {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ContainerElement {
-    pub id: Option<String>,
+    pub id: String,
     pub config: ContainerConfig,
 }
 
 impl ContainerElement {
     pub fn new(config: ContainerConfig, id: Option<String>) -> Self {
-        Self { config, id }
+        Self {
+            config,
+            id: id.unwrap_or_else(|| rand::rng().next_u64().to_string()),
+        }
     }
 
     pub fn config(&self) -> &ContainerConfig {
         &self.config
     }
 
-    pub fn id(&self) -> Option<&String> {
-        self.id.as_ref()
+    pub fn id(&self) -> &String {
+        &self.id
     }
 }
