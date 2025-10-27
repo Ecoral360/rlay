@@ -1,5 +1,7 @@
 use std::{
+    any::Any,
     collections::{HashMap, HashSet},
+    marker::PhantomData,
     sync::{Arc, Mutex},
 };
 
@@ -63,59 +65,6 @@ impl ElementState {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, From)]
-pub enum Value {
-    String(String),
-    Bool(bool),
-    Int(i32),
-    Float(f32),
-    Array(Vec<Value>),
-    Object(HashMap<String, Value>),
-}
-
-impl Value {
-    pub fn str<S: ToString>(s: S) -> Self {
-        Self::String(s.to_string())
-    }
-
-    pub fn obj<E: Into<Vec<(K, V)>>, K: ToString, V: Into<Value>>(entries: E) -> Self {
-        Self::Object(HashMap::from_iter(
-            entries
-                .into()
-                .into_iter()
-                .map(|(k, v)| (k.to_string(), v.into())),
-        ))
-    }
-
-    pub fn unwrap_arr(&self) -> &Vec<Value> {
-        match self {
-            Self::Array(v) => v,
-            _ => panic!("not an array"),
-        }
-    }
-
-    pub fn unwrap_obj(&self) -> &HashMap<String, Value> {
-        match self {
-            Self::Object(o) => o,
-            _ => panic!("not an object"),
-        }
-    }
-
-    pub fn unwrap_string(&self) -> &String {
-        match self {
-            Self::String(s) => s,
-            _ => panic!("not a string"),
-        }
-    }
-    
-    pub fn unwrap_bool(&self) -> bool {
-        match self {
-            Self::Bool(b) => *b,
-            _ => panic!("not a boolean"),
-        }
-    }
-}
-
 #[derive(Default)]
 pub struct AppState {
     hovered: HashSet<String>,
@@ -126,7 +75,7 @@ pub struct AppState {
     input_state: InputState,
     input_state_init: bool,
 
-    store: Arc<Mutex<HashMap<String, Value>>>,
+    store: Arc<Mutex<HashMap<String, Box<dyn Any>>>>,
 }
 
 // fn get_or_insert(map: &mut HashMap<String, ElementState>, key: String) -> &ElementState {
@@ -148,7 +97,7 @@ impl AppState {
         Self::default()
     }
 
-    pub fn store(&self) -> Arc<Mutex<HashMap<String, Value>>> {
+    pub fn store(&self) -> Arc<Mutex<HashMap<String, Box<dyn Any>>>> {
         Arc::clone(&self.store)
     }
 
@@ -359,31 +308,156 @@ pub struct InputState {
     pub keyboard: KeyboardInput,
 }
 
-pub struct UseState {
-    key: String,
-    store: Arc<Mutex<HashMap<String, Value>>>,
+#[derive(Debug, Clone, PartialEq, From)]
+pub enum Value {
+    String(String),
+    Bool(bool),
+    Int(i32),
+    Float(f32),
+    Array(Vec<Value>),
+    Object(HashMap<String, Value>),
 }
 
-impl UseState {
-    pub fn new(key: String, ctx: &AppCtx, default_val: fn() -> Value) -> Self {
+impl Value {
+    pub fn str<S: ToString>(s: S) -> Self {
+        Self::String(s.to_string())
+    }
+
+    pub fn obj<E: Into<Vec<(K, V)>>, K: ToString, V: Into<Value>>(entries: E) -> Self {
+        Self::Object(HashMap::from_iter(
+            entries
+                .into()
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v.into())),
+        ))
+    }
+
+    pub fn unwrap_arr(&self) -> &Vec<Value> {
+        match self {
+            Self::Array(v) => v,
+            _ => panic!("not an array"),
+        }
+    }
+
+    pub fn unwrap_obj(&self) -> &HashMap<String, Value> {
+        match self {
+            Self::Object(o) => o,
+            _ => panic!("not an object"),
+        }
+    }
+
+    pub fn unwrap_string(&self) -> &String {
+        match self {
+            Self::String(s) => s,
+            _ => panic!("not a string"),
+        }
+    }
+
+    pub fn unwrap_bool(&self) -> bool {
+        match self {
+            Self::Bool(b) => *b,
+            _ => panic!("not a boolean"),
+        }
+    }
+}
+
+pub struct UseState<T: Clone> {
+    key: String,
+    store: Arc<Mutex<HashMap<String, Box<dyn Any>>>>,
+    phantom: PhantomData<T>,
+}
+
+impl<T: Clone + 'static> UseState<T> {
+    pub fn new<F>(key: String, ctx: &AppCtx, default_val: F) -> Self
+    where
+        F: Fn() -> T,
+    {
         let store = ctx.store();
         let mut store = store.lock().unwrap();
         if store.get(&key).is_none() {
-            store.insert(key.clone(), (default_val)());
+            store.insert(key.clone(), Box::new((default_val)()));
         }
         Self {
             key,
             store: ctx.store(),
+            phantom: PhantomData,
         }
     }
 
-    pub fn get(&self) -> Value {
+    pub fn get(&self) -> T {
         let store = &self.store;
-        store.lock().unwrap().get(&self.key).unwrap().clone()
+        let store = store.lock().unwrap();
+        store
+            .get(&self.key)
+            .and_then(|v| v.downcast_ref::<T>())
+            .cloned()
+            .unwrap()
     }
 
-    pub fn set(&self, val: Value) {
+    pub fn set(&self, val: T) {
         let store = &self.store;
-        store.lock().unwrap().insert(self.key.clone(), val);
+        store
+            .lock()
+            .unwrap()
+            .insert(self.key.clone(), Box::new(val));
     }
 }
+
+#[macro_export]
+macro_rules! useState {
+    // ($ctx:ident, { $($key:literal : $val:expr),* $(,)? }) => {{
+    //     let mut map = ::std::collections::HashMap::new();
+    //     {$(
+    //         map.insert($key.to_string(), $val.into());
+    //     )*}
+    //     let key = format!("{}:{}", file!(), line!());
+    //     &mut $crate::UseState::new(key, &$ctx, move || map)
+    // }};
+    //
+    // ($ctx:ident, [$($val:expr),* $(,)?]) => {{
+    //     let mut v = Vec::new();
+    //     {$(
+    //         v.push($val.into());
+    //     )*}
+    //     let key = format!("{}:{}", file!(), line!());
+    //     &mut $crate::UseState::new(key, &$ctx, move || v)
+    // }};
+
+    ($ctx:ident, $default_val:expr) => {{
+        let key = format!("{}:{}", file!(), line!());
+        &mut $crate::UseState::new(key, &$ctx, || $default_val)
+    }};
+}
+
+#[macro_export]
+macro_rules! map {
+    ($($key:literal : $val:expr),* $(,)?) => {{
+        let mut map = ::std::collections::HashMap::new();
+        {$(
+            map.insert($key.to_string(), $val);
+        )*}
+        map
+    }};
+}
+
+// #[macro_export]
+// macro_rules! value {
+//     ({ $($key:literal : $val:expr),* $(,)? }) => {{
+//         let mut map = ::std::collections::HashMap::new();
+//         {$(
+//             map.insert($key.to_string(), $val.into());
+//         )*}
+//         $crate::Value::Object(map)
+//     }};
+//     ([$($val:expr),* $(,)?]) => {{
+//         let mut v = Vec::new();
+//         {$(
+//             v.push($val.into());
+//         )*}
+//         $crate::Value::Array(v)
+//     }};
+//
+//     ($val:expr) => {{
+//         $crate::Value::from($val)
+//     }};
+// }

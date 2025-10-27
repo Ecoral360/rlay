@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::{Arc, Mutex}};
+use std::{any::Any, collections::HashMap, sync::{Arc, Mutex}};
 
 use crate::{
     AppState, Dimension2D, Done, Element, ElementLayout, ElementState, Initial, InputState, MinMax,
@@ -128,7 +128,7 @@ impl AppCtx {
             .ok_or(RlayError::ElementNotFound)
     }
 
-    pub fn store(&self) -> Arc<Mutex<HashMap<String, Value>>> {
+    pub fn store(&self) -> Arc<Mutex<HashMap<String, Box<dyn Any>>>> {
         self.state.store()
     }
 
