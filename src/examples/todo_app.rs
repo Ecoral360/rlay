@@ -1,8 +1,5 @@
 use rlay_core::{
-    AppCtx, LayoutDirection, MouseButtonState, Padding, StateValue,
-    colors::{BLACK, DARKGRAY, LIGHTGRAY, WHITE},
-    err::RlayError,
-    rlay, useState,
+    colors::{BLACK, DARKGRAY, LIGHTGRAY, WHITE}, corner_radius, err::RlayError, rlay, useState, AppCtx, LayoutDirection, MouseButtonState, Padding, StateValue
 };
 
 #[derive(Clone, Debug)]
@@ -55,11 +52,18 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
                 let completed = todo.completed;
                 let title = todo.title.clone();
                 let todo_id = format!("todo-{}", i);
+                let delete_todo_id = format!("delete-todo-{}", i);
 
                 if ctx.state().is_clicked(&todo_id) {
                     let mut new_todos = todos_arr.clone();
                     new_todos[i] = Todo { title: title.to_string(), completed: !completed };
-                    todos.set(new_todos.into());
+                    todos.set(new_todos);
+                }
+
+                if ctx.state().is_clicked(&delete_todo_id) {
+                    let mut new_todos = todos_arr.clone();
+                    new_todos.remove(i);
+                    todos.set(new_todos);
                 }
 
                 rlay!(ctx, view(child_gap = 10, align = { y = Center }) {
@@ -71,6 +75,17 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
                         }
                     ));
                     rlay!(ctx, text(title, font_size = 24 as u16));
+                    rlay!(ctx, view[id=delete_todo_id](
+                        sizing = { Fixed(20), Fixed(20) },
+                        align = { x = Center, y = Center },
+                        background_color = WHITE,
+                        border = {
+                            color = BLACK,
+                        },
+                        corner_radius = corner_radius.all(100.0),
+                    ){ 
+                        rlay!(ctx, text("x", font_size = 24 as u16));
+                    });
                 });
             }
         });
