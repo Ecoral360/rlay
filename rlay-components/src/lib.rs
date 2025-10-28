@@ -65,8 +65,8 @@ macro_rules! _comp_field {
         $crate::_comp_field!($config; $($($($rest)+)?)?)
     };
 
-    ($config:ident; $field:ident() {$($val:tt)*} $(, $($($rest:tt)+)?)?) => {
-        $config = $config.$field(Box::new(|| { $($val)* }));
+    ($config:ident; $field:ident($($arg:ident $(: $arg_type:ty)?),* $(,)?) {$($val:tt)*} $(, $($($rest:tt)+)?)?) => {
+        $config = $config.$field(Box::new(|$($arg $(: $arg_type)?),*| { $($val)* }));
         $crate::_comp_field!($config; $($($($rest)+)?)?)
     };
 

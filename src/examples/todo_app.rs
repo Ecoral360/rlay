@@ -128,9 +128,9 @@ def_comp! {
     TDAttributesBuilder
     struct TDAttributes<'a> {
         todo: &'a Todo,
-        #[builder(default = "Box::new(||{})")]
+        #[builder(default = "Box::new(|| {})")]
         on_check: Callback<'a>,
-        #[builder(default = "Box::new(||{})")]
+        #[builder(default = "Box::new(|| {})")]
         on_delete: Callback<'a>,
     }
 
