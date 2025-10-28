@@ -27,6 +27,12 @@ macro_rules! _expand_some_or_none {
 
 #[macro_export]
 macro_rules! comp {
+    ($ctx:ident, view$($rest:tt)*) => {{
+        rlay_core::view!($ctx, $($rest)*)
+    }};
+    ($ctx:ident, text$($rest:tt)*) => {{
+        rlay_core::text!($ctx, $($rest)*)
+    }};
     ($ctx:ident, $comp:ident$(($($attrs:tt)*))? $($child:block)?) => {{
         #[allow(clippy::needless_update)]
         {

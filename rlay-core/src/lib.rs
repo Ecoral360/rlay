@@ -8,10 +8,10 @@ pub use state::*;
 mod app_ctx;
 pub mod elements;
 pub mod err;
-pub mod reactive;
 mod event;
 mod layout;
 mod mem;
+pub mod reactive;
 mod render;
 mod state;
 
@@ -199,7 +199,7 @@ macro_rules! view_config {
 
 #[macro_export]
 macro_rules! view {
-    ($ctx:ident, {$($config:tt)*}) => {{
+    ($ctx:ident, $([$($attrs:tt)*])?($($config:tt)*) $($child:block)?) => {{
         #[allow(clippy::needless_update)]
         {
             let config = {
@@ -208,30 +208,17 @@ macro_rules! view {
                 config
             };
 
-            $ctx.open_element(
-                $crate::Element::Container($crate::elements::ContainerElement::new(config))
-            );
-        }
-        {
-            $ctx.close_element();
-        }
-    }};
-    ($ctx:ident, {$($config:tt)*} $child:block) => {{
-        #[allow(clippy::needless_update)]
-        {
-            let config = {
-                let mut config = $crate::ContainerConfig::default();
-                $crate::_rlay!(config; $($config)*);
-                config
-            };
+            $crate::_attrs!(view, attrs[id]: $($($attrs)*)?);
 
             $ctx.open_element(
-                $crate::Element::Container($crate::elements::ContainerElement::new(config))
+                $crate::Element::Container(
+                    $crate::elements::ContainerElement::new(
+                        config,
+                        attrs.get(&"id".to_string()).cloned(),
+                    ))
             );
         }
-        {
-            $child;
-        }
+        $($child)?
         {
             $ctx.close_element();
         }
@@ -240,24 +227,26 @@ macro_rules! view {
 
 #[macro_export]
 macro_rules! text {
-    ($ctx:ident, $text:expr, {$($config:tt)*}) => {{
+    ($ctx:ident, $([$($attrs:tt)*])? $(($($config:tt)*))? $text:block) => {{
         #[allow(clippy::needless_update)]
         {
             let text_config = {
                 let mut config = $crate::TextConfig::default();
-                $crate::_rlay!(config; $($config)*);
+                $crate::_rlay!(config; $($($config)*)?);
                 config
             };
+
+            $crate::_attrs!(text, attrs[id]: $($($attrs)*)?);
 
             $ctx.open_element(
                 $crate::Element::Text(
                     $crate::elements::TextElement::new(
                         text_config,
                         $text.to_string(),
+                        attrs.get(&"id".to_string()).cloned(),
                     ))
             );
-        }
-        {
+
             $ctx.close_element();
         }
     }};
