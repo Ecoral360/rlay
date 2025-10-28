@@ -8,6 +8,7 @@ pub use state::*;
 mod app_ctx;
 pub mod elements;
 pub mod err;
+pub mod reactive;
 mod event;
 mod layout;
 mod mem;
@@ -279,8 +280,8 @@ macro_rules! _rlay {
     ($config:ident; $field:expr) => {
         $config = $field;
     };
-
 }
+
 #[macro_export]
 macro_rules! _rlay_field_alias {
     ($config:ident.bg) => {

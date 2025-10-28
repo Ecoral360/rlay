@@ -1,10 +1,12 @@
 use std::{fmt::Display, str::FromStr};
 
+use rlay_components::{button::Button, comp};
 use rlay_core::{
-    AppCtx, LayoutDirection, MouseButtonState, Padding, StateValue,
+    AppCtx, LayoutDirection, MouseButtonState, Padding,
     colors::{BLACK, DARKGRAY, LIGHTGRAY, WHITE},
     corner_radius,
     err::RlayError,
+    reactive::StateValue,
     rlay, useEffect, useState,
 };
 
@@ -79,6 +81,8 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
     let todo_path = "./todos";
     let ctx = &mut app_ctx;
 
+    let show_completed = useState!(ctx, true);
+
     let todos = useState!(
         ctx,
         load_todos(todo_path).unwrap_or_else(|_| vec![
@@ -92,7 +96,6 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
             }
         ])
     );
-
 
     useEffect!(
         ctx,
@@ -117,7 +120,14 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
         sizing = { Grow, Grow },
         align = {},
     ) {
-        rlay!(ctx, text[]("Todo app", font_size = 45 as u16));
+        rlay!(ctx, text("Todo app", font_size = 45 as u16));
+
+        comp!(ctx, Button[
+            on_click = Box::new(|| { show_completed.set(!show_completed.get()); }),
+        ](padding = Padding::default().all(10)) {
+            rlay!(ctx, text(if show_completed.get() { "Hide completed" } else { "Show completed" }));
+        });
+
         rlay!(ctx, view(
             background_color = LIGHTGRAY,
             sizing = { 50%, Grow },
