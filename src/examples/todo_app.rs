@@ -1,13 +1,8 @@
 use std::{fmt::Display, marker::PhantomData, str::FromStr};
 
-use macroquad::color::RED;
-use rlay_components::{Component, button::Button, comp, def_comp, input_text::InputText};
+use rlay_components::{button::Button, comp, def_comp, input_text::InputText, Component};
 use rlay_core::{
-    AppCtx, LayoutDirection, MouseButtonState, Padding,
-    colors::{BLACK, DARKGRAY, LIGHTGRAY, WHITE},
-    corner_radius,
-    err::RlayError,
-    useEffect, useState, view_config,
+    colors::{BLACK, DARKGRAY, LIGHTGRAY, RED, WHITE}, corner_radius, err::RlayError, useEffect, useState, view_config, AppCtx, LayoutDirection, MouseButtonState, Padding
 };
 
 pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
@@ -55,7 +50,7 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
         comp!(ctx, text(font_size = 45 as u16) { "Todo app" });
 
         comp!(ctx, Button(config = view_config!(padding = Padding::default().all(10)),
-            on_click = Box::new(|| { show_completed.set(!show_completed.get()); }),
+            on_click() { show_completed.set(!show_completed.get()); },
         ) {
             comp!(ctx, text() { if show_completed.get() { "Hide completed" } else { "Show completed" } });
         });
@@ -77,16 +72,16 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
                 let title = todo.title.clone();
                 comp!(ctx, TodoElement(
                     todo = Some(todo),
-                    on_check = Box::new(|| {
+                    on_check() {
                         let mut new_todos = todos_arr.clone();
                         new_todos[i] = Todo { title: title.to_string(), completed: !completed };
                         todos.set(new_todos);
-                    }),
-                    on_delete = Box::new(|| {
+                    },
+                    on_delete() {
                         let mut new_todos = todos_arr.clone();
                         new_todos.remove(i);
                         todos.set(new_todos);
-                    })
+                    }
                 ))
             }
         });
@@ -103,7 +98,7 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
                         width = 1.0,
                     }
                 ),
-                on_click = Box::new(|| {
+                on_click() {
                     let input_text = new_todo_input.get();
                     let input_text = input_text.trim();
                     if !input_text.is_empty() {
@@ -115,7 +110,7 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
 
                         new_todo_input.set(String::new());
                     }
-                })
+                }
             ) {
                 comp!(ctx, text(font_size = 24 as u16) { "+ Todo" });
             });
@@ -124,6 +119,7 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
 
     Ok(app_ctx)
 }
+
 
 def_comp! {
     TDAttributes<'a> {

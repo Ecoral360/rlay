@@ -65,6 +65,11 @@ macro_rules! _comp_field {
         $crate::_comp_field!($config; $($($($rest)+)?)?)
     };
 
+    ($config:ident; $field:ident() {$($val:tt)*} $(, $($($rest:tt)+)?)?) => {
+        $config.$field = Box::new(|| { $($val)* });
+        $crate::_comp_field!($config; $($($($rest)+)?)?)
+    };
+
     ($config:ident; $field:expr) => {
         $config = $field;
     };
