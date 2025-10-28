@@ -1,12 +1,11 @@
 use std::{fmt::Display, str::FromStr};
 
-use rlay_components::{button::Button, comp};
+use rlay_components::{button::Button, comp, input_text::InputText};
 use rlay_core::{
     AppCtx, LayoutDirection, MouseButtonState, Padding,
     colors::{BLACK, DARKGRAY, LIGHTGRAY, WHITE},
     corner_radius,
     err::RlayError,
-    reactive::StateValue,
     rlay, useEffect, useState,
 };
 
@@ -178,7 +177,7 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
         });
 
         rlay!(ctx, view(sizing = { 50%, Fit }) {
-            text_input(ctx, new_todo)?;
+            comp!(ctx, InputText[input_state = Some(new_todo), placeholder = Some("new todo...")]);
 
             comp!(ctx, Button(
                 padding = Padding::default().x(20).y(6),
@@ -207,62 +206,5 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
         })
     });
 
-    // get_root().ok_or(RlayError::NoRoot)
-    // ctx.get_root().ok_or(RlayError::NoRoot)
     Ok(app_ctx)
-}
-
-fn text_input(ctx: &mut AppCtx, input_state: &mut StateValue<String>) -> Result<(), RlayError> {
-    let id = ctx.get_local_id();
-    let is_focused = ctx.is_focused(&id);
-    let input_text = input_state.get();
-    let timer = useState!(ctx, 0);
-
-    timer.set((timer.get() + 1) % 100);
-
-    if is_focused {
-        if let Some(chr) = ctx.get_input_state().keyboard.last_char_pressed {
-            match chr {
-                '\n' | '\r' => {
-                    ctx.set_focused(None);
-                }
-                '\x08' => {
-                    if !input_text.is_empty() {
-                        input_state.set(format!("{}", &input_text[..input_text.len() - 1]));
-                    }
-                }
-                _ => {
-                    input_state.set(format!("{}{}", input_text, chr));
-                }
-            }
-        }
-    }
-
-    rlay!(ctx, view[id=&id](
-        sizing = {Grow, Grow},
-        align = { y = Center },
-        padding = Padding::default().left(5),
-        background_color = if is_focused { LIGHTGRAY } else { WHITE },
-        border = {
-            color = BLACK,
-            width = 1.0,
-        }
-    ) {
-        if ctx.state().is_clicked(&id) {
-            ctx.set_focused(Some(id));
-        }
-        if is_focused {
-            rlay!(
-                ctx,
-                text(
-                    format!("{}{}", input_text, if timer.get() > 60 { "" } else { "|" }),
-                    font_size = 24 as u16
-                )
-            );
-        } else {
-            rlay!(ctx, text(input_text, font_size = 24 as u16));
-        }
-    });
-
-    Ok(())
 }

@@ -9,11 +9,19 @@ use rlay_core::{
 
 use crate::Component;
 
-#[derive(Default)]
 pub struct ButtonAttributes<'a> {
     pub id: Option<String>,
-    pub on_click: Option<Box<dyn Fn() + 'a>>,
+    pub on_click: Box<dyn Fn() + 'a>,
     pub text: Option<String>,
+}
+impl<'a> Default for ButtonAttributes<'a> {
+    fn default() -> Self {
+        Self {
+            id: Default::default(),
+            on_click: Box::new(|| {}),
+            text: Default::default(),
+        }
+    }
 }
 pub type ButtonConfig = ContainerConfig;
 pub struct Button<'a> {
@@ -36,7 +44,7 @@ impl<'a> Component for Button<'a> {
         let id = attributes.id.unwrap_or_else(|| ctx.get_local_id());
 
         if ctx.is_clicked(&id) {
-            attributes.on_click.map(|c| (c)());
+            (attributes.on_click)();
         }
 
         let c = view_config!(
@@ -57,6 +65,11 @@ impl<'a> Component for Button<'a> {
         Ok(())
     }
 }
+
+// def_comp!(Button:
+// attrs: {}
+// {}
+// );
 
 // #[derive(Default)]
 // pub struct ButtonConfig {

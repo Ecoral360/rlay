@@ -1,70 +1,109 @@
+use std::convert::Infallible;
+
 use rlay_core::{
-    AppCtx, MouseButtonState, border, border_width,
-    colors::{RED, WHITE},
+    AppCtx, Padding,
+    colors::{BLACK, LIGHTGRAY, WHITE},
     err::RlayError,
-    padding, rlay, view_config,
+    reactive::StateValue,
+    rlay, useState,
 };
 
-pub fn input_text<F>(
-    ctx: &mut AppCtx,
-    placeholder: Option<String>,
-    on_change: F,
-) -> Result<&mut AppCtx, RlayError>
-where
-    F: Fn(String),
-{
-    let id = ctx.get_local_id();
+use crate::Component;
 
-    if ctx.is_clicked(&id) && !ctx.is_focused(&id) {
-        ctx.set_focused(Some(id.clone()));
-    } else if ctx.get_input_state().mouse.left_button == MouseButtonState::Pressed {
-        ctx.set_flag(&id, "focus", false);
-    }
+#[derive(Default)]
+pub struct InputTextAttributes<'a> {
+    pub id: Option<&'a str>,
+    pub placeholder: Option<&'a str>,
+    pub input_state: Option<&'a mut StateValue<String>>,
+}
 
-    let is_focused = ctx.get_flag(&id, "focus");
+pub struct InputText<'a> {
+    _marker: &'a Infallible,
+}
 
-    let border = if is_focused {
-        Some(border!(color = RED, width = border_width.all(2.0)))
-    } else {
-        None
-    };
+impl<'a> Component for InputText<'a> {
+    type Attributes = InputTextAttributes<'a>;
 
-    let c = view_config!(
-        background_color = WHITE,
-        border = border,
-        padding = padding.all(5),
-        focusable = true,
-    );
+    type Config = ();
 
-    let mut value = ctx.get_attr(&id, "value").cloned().unwrap_or_default();
+    fn render<F>(
+        ctx: &mut AppCtx,
+        attributes: Self::Attributes,
+        _config: Self::Config,
+        _children: Option<F>,
+    ) -> Result<(), RlayError>
+    where
+        F: FnOnce(&mut AppCtx) -> Result<(), RlayError>,
+    {
+        let input_state = match attributes.input_state {
+            Some(state) => state,
+            None => useState!(ctx, String::new()),
+        };
 
-    if is_focused {
-        if let Some(key) = &ctx.get_input_state().keyboard.last_char_pressed {
-            let old_value = value.clone();
-            match key {
-                '\u{8}' => {
-                    if !value.is_empty() {
-                        value = value[..value.len() - 1].to_string();
+        let id = match attributes.id {
+            Some(id) => id,
+            None => &ctx.get_local_id(),
+        };
+
+        let placeholder = match attributes.placeholder {
+            Some(val) => val,
+            None => "",
+        };
+
+        let is_focused = ctx.is_focused(id);
+        let input_text = input_state.get();
+        let timer = useState!(ctx, 0);
+
+        timer.set((timer.get() + 1) % 100);
+
+        if is_focused {
+            if let Some(chr) = ctx.get_input_state().keyboard.last_char_pressed {
+                match chr {
+                    '\n' | '\r' => {
+                        ctx.set_focused(None);
+                    }
+                    '\x08' => {
+                        if !input_text.is_empty() {
+                            input_state.set(format!("{}", &input_text[..input_text.len() - 1]));
+                        }
+                    }
+                    _ => {
+                        input_state.set(format!("{}{}", input_text, chr));
                     }
                 }
-                '\u{0D}' => {
-                    ctx.set_flag(&id, "focus", false);
-                }
-                c => {
-                    value += &c.to_string();
-                }
-            }
-
-            if value != old_value {
-                ctx.set_attr(&id, "value", value.clone());
-                on_change(value.clone());
             }
         }
+
+        rlay!(ctx, view[id=&id](
+            sizing = {Grow, Grow},
+            align = { y = Center },
+            padding = Padding::default().left(5),
+            background_color = if is_focused { LIGHTGRAY } else { WHITE },
+            border = {
+                color = BLACK,
+                width = 1.0,
+            }
+        ) {
+            if ctx.state().is_clicked(&id) {
+                ctx.set_focused(Some(id.to_string()));
+                timer.set(0);
+            }
+            if is_focused {
+                rlay!(
+                    ctx,
+                    text(
+                        format!("{}{}", input_text, if timer.get() > 60 { "" } else { "|" }),
+                        font_size = 24 as u16
+                    )
+                );
+            } else {
+                rlay!(ctx, text(
+                    if input_text.is_empty() { placeholder } else { &input_text }, 
+                    font_size = 24 as u16
+                ));
+            }
+        });
+
+        Ok(())
     }
-
-    rlay!(ctx, view[id = id](c) {
-        rlay!(ctx, text(if value.is_empty() { placeholder.unwrap_or_default() } else { value }))
-    });
-
-    Ok(ctx)
 }
