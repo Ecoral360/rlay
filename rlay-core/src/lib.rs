@@ -174,27 +174,27 @@ macro_rules! _attrs2 {
 
 #[macro_export]
 macro_rules! view_config {
-    (partial: {$($config:tt)*}) => {
+    ($($config:tt)*) => {
         {
             #[allow(clippy::needless_update)]
             {
                 let mut config = $crate::PartialContainerConfig::default();
-                $crate::_rlay!(config; $($config)*);
+                $crate::_partial_rlay!(config; $($config)*);
                 config
             }
         }
     };
 
-    ($($config:tt)*) => {
-        {
-            #[allow(clippy::needless_update)]
-            {
-                let mut config = $crate::ContainerConfig::default();
-                $crate::_rlay!(config; $($config)*);
-                config
-            }
-        }
-    };
+    // ($($config:tt)*) => {
+    //     {
+    //         #[allow(clippy::needless_update)]
+    //         {
+    //             let mut config = $crate::ContainerConfig::default();
+    //             $crate::_rlay!(config; $($config)*);
+    //             config
+    //         }
+    //     }
+    // };
 }
 
 #[macro_export]
@@ -283,6 +283,25 @@ macro_rules! _rlay {
 }
 
 #[macro_export]
+macro_rules! _partial_rlay {
+    ($config:ident;) => {};
+
+    ($config:ident; $field:ident = {$($val:tt)*} $(, $($($rest:tt)+)?)?) => {
+        $crate::_rlay_field_alias!($config.$field) = $crate::_partial_rlay_field!($field = {$($val)*});
+        $crate::_partial_rlay!($config; $($($($rest)+)?)?)
+    };
+
+    ($config:ident; $field:ident = $val:expr $(, $($($rest:tt)+)?)?) => {
+        $crate::_rlay_field_alias!($config.$field) = $crate::_partial_rlay_field!($field = $val);
+        $crate::_partial_rlay!($config; $($($($rest)+)?)?)
+    };
+
+    ($config:ident; $field:expr) => {
+        $config = Some($field);
+    };
+}
+
+#[macro_export]
 macro_rules! _rlay_field_alias {
     ($config:ident.bg) => {
         $config.background_color
@@ -329,6 +348,45 @@ macro_rules! _rlay_field {
 
     ($field:ident = $val:expr) => {
         $val.into()
+    };
+}
+
+#[macro_export]
+macro_rules! _partial_rlay_field {
+    () => {
+        Default::default()
+    };
+
+    (sizing = {$($val:tt)*}) => {
+        Some($crate::sizing!($($val)*))
+    };
+
+    (align = {$($val:tt)*}) => {
+        Some($crate::align!($($val)*))
+    };
+
+    (font_name = $val:expr) => {
+        Some($val.into())
+    };
+
+    (border = {$($val:tt)*}) => {
+        Some($crate::border!($($val)*))
+    };
+
+    (corner_radius = {$($val:tt)*}) => {
+        Some($crate::corner_radius!($($val)*))
+    };
+
+    (corner_radius = $val:expr) => {
+        Some($val.into())
+    };
+
+    (angle = {$val:literal deg}) => {
+        Some(($val as f32).to_radians())
+    };
+
+    ($field:ident = $val:expr) => {
+        Some($val.into())
     };
 }
 

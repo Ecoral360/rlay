@@ -13,7 +13,7 @@ use crate::Component;
 #[derive(Default)]
 pub struct InputTextAttributes<'a> {
     pub id: Option<&'a str>,
-    pub placeholder: Option<&'a str>,
+    pub placeholder: &'a str,
     pub input_state: Option<&'a mut StateValue<String>>,
 }
 
@@ -24,12 +24,9 @@ pub struct InputText<'a> {
 impl<'a> Component for InputText<'a> {
     type Attributes = InputTextAttributes<'a>;
 
-    type Config = ();
-
     fn render<F>(
         ctx: &mut AppCtx,
         attributes: Self::Attributes,
-        _config: Self::Config,
         _children: Option<F>,
     ) -> Result<(), RlayError>
     where
@@ -45,10 +42,7 @@ impl<'a> Component for InputText<'a> {
             None => &ctx.get_local_id(),
         };
 
-        let placeholder = match attributes.placeholder {
-            Some(val) => val,
-            None => "",
-        };
+        let placeholder = attributes.placeholder;
 
         let is_focused = ctx.is_focused(id);
         let input_text = input_state.get();

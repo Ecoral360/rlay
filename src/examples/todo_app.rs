@@ -1,12 +1,13 @@
 use std::{fmt::Display, str::FromStr};
 
+use macroquad::color::RED;
 use rlay_components::{button::Button, comp, input_text::InputText};
 use rlay_core::{
-    AppCtx, LayoutDirection, MouseButtonState, Padding,
+    AppCtx, LayoutDirection, MouseButtonState, Padding, PartialContainerConfig,
     colors::{BLACK, DARKGRAY, LIGHTGRAY, WHITE},
     corner_radius,
     err::RlayError,
-    rlay, useEffect, useState,
+    rlay, useEffect, useState, view_config,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -121,9 +122,9 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
     ) {
         rlay!(ctx, text("Todo app", font_size = 45 as u16));
 
-        comp!(ctx, Button(padding = Padding::default().all(10))[
+        comp!(ctx, Button(config = view_config!(padding = Padding::default().all(10)),
             on_click = Box::new(|| { show_completed.set(!show_completed.get()); }),
-        ] {
+        ) {
             rlay!(ctx, text(if show_completed.get() { "Hide completed" } else { "Show completed" }));
         });
 
@@ -144,32 +145,35 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
 
                 rlay!(ctx, view(child_gap = 10, align = { y = Center }) {
                     comp!(ctx, Button(
-                        sizing = { Fixed(20), Fixed(20) },
-                        background_color = if completed { DARKGRAY } else { WHITE }
-                    )[
+                        config = view_config!(
+                            sizing = { Fixed(20), Fixed(20) },
+                            background_color = if completed { DARKGRAY } else { WHITE }
+                        ),
                         on_click = Box::new(|| {
                                 let mut new_todos = todos_arr.clone();
                                 new_todos[i] = Todo { title: title.to_string(), completed: !completed };
                                 todos.set(new_todos);
                         })
-                    ]);
+                    ));
 
                     rlay!(ctx, text(title, font_size = 24 as u16));
                     comp!(ctx, Button(
-                        sizing = { Fixed(20), Fixed(20) },
-                        align = { x = Center, y = Center },
-                        background_color = WHITE,
-                        border = {
-                            color = BLACK,
-                        },
-                        corner_radius = corner_radius.all(100.0),
-                    )[
+                        config = view_config!(
+                            sizing = { Fixed(20), Fixed(20) },
+                            align = { x = Center, y = Center },
+                            background_color = WHITE,
+                            border = {
+                                color = BLACK,
+                            },
+                            corner_radius = corner_radius.all(100.0),
+                        ),
+                        config_on_hover = view_config!(background_color = RED),
                         on_click = Box::new(||{
                             let mut new_todos = todos_arr.clone();
                             new_todos.remove(i);
                             todos.set(new_todos);
-                        })
-                    ] {
+                        }),
+                    ) {
                         rlay!(ctx, text("x", font_size = 24 as u16));
                     });
                 });
@@ -177,16 +181,17 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
         });
 
         rlay!(ctx, view(sizing = { 50%, Fit }) {
-            comp!(ctx, InputText[input_state = Some(new_todo), placeholder = Some("new todo...")]);
+            comp!(ctx, InputText(input_state = Some(new_todo), placeholder = "new todo..."));
 
             comp!(ctx, Button(
-                padding = Padding::default().x(20).y(6),
-                background_color = WHITE,
-                border = {
-                    color = BLACK,
-                    width = 1.0,
-                }
-            )[
+                config = view_config!(
+                    padding = Padding::default().x(20).y(6),
+                    background_color = WHITE,
+                    border = {
+                        color = BLACK,
+                        width = 1.0,
+                    }
+                ),
                 on_click = Box::new(|| {
                     let input_text = new_todo.get();
                     let input_text = input_text.trim();
@@ -200,7 +205,7 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
                         new_todo.set(String::new());
                     }
                 })
-            ] {
+            ) {
                 rlay!(ctx, text("+ Todo", font_size = 24 as u16));
             });
         })

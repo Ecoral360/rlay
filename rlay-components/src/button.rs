@@ -1,7 +1,7 @@
 use std::convert::Infallible;
 
 use rlay_core::{
-    AppCtx, Config, ContainerConfig, border_width,
+    AppCtx, Config, ContainerConfig, PartialContainerConfig, border_width,
     colors::{BLACK, WHITE},
     err::RlayError,
     padding, rlay, view_config,
@@ -12,6 +12,9 @@ use crate::Component;
 pub struct ButtonAttributes<'a> {
     pub id: Option<String>,
     pub on_click: Box<dyn Fn() + 'a>,
+    pub on_hover: Box<dyn Fn() + 'a>,
+    pub config_on_hover: PartialContainerConfig,
+    pub config: PartialContainerConfig,
     pub text: Option<String>,
 }
 impl<'a> Default for ButtonAttributes<'a> {
@@ -19,6 +22,9 @@ impl<'a> Default for ButtonAttributes<'a> {
         Self {
             id: Default::default(),
             on_click: Box::new(|| {}),
+            on_hover: Box::new(|| {}),
+            config_on_hover: Default::default(),
+            config: Default::default(),
             text: Default::default(),
         }
     }
@@ -30,12 +36,10 @@ pub struct Button<'a> {
 
 impl<'a> Component for Button<'a> {
     type Attributes = ButtonAttributes<'a>;
-    type Config = ButtonConfig;
 
     fn render<F>(
         ctx: &mut AppCtx,
         attributes: Self::Attributes,
-        config: Self::Config,
         children: Option<F>,
     ) -> Result<(), RlayError>
     where
@@ -47,14 +51,19 @@ impl<'a> Component for Button<'a> {
             (attributes.on_click)();
         }
 
-        let c = view_config!(
+        let mut c = view_config!(
             background_color = WHITE,
             border = { color = BLACK, width = border_width.all(1.0) },
             padding = padding.all(0)
         )
-        .merge(config);
+        .merge(attributes.config);
 
-        rlay!(ctx, view[id = id](c) {
+        if ctx.is_hovered(&id) {
+            (attributes.on_hover)();
+            c = c.merge(attributes.config_on_hover);
+        }
+
+        rlay!(ctx, view[id = id](c.into()) {
             if let Some(text) = attributes.text {
                 rlay!(ctx, text(text));
             }

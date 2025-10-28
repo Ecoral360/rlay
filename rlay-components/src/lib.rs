@@ -27,15 +27,9 @@ macro_rules! _expand_some_or_none {
 
 #[macro_export]
 macro_rules! comp {
-    ($ctx:ident, $comp:ident$(($($config:tt)*))?$([$($attrs:tt)*])? $($child:block)?) => {{
+    ($ctx:ident, $comp:ident$(($($attrs:tt)*))? $($child:block)?) => {{
         #[allow(clippy::needless_update)]
         {
-            let config = {
-                let mut config = <$comp as $crate::Component>::Config::default();
-                rlay_core::_rlay!(config; $($($config)*)?);
-                config
-            };
-
             let attributes = {
                 let mut attributes = <$comp as $crate::Component>::Attributes::default();
                 $crate::_comp_field!(attributes; $($($attrs)*)?);
@@ -45,7 +39,6 @@ macro_rules! comp {
             <$comp as $crate::Component>::render(
                 $ctx,
                 attributes,
-                config,
                 $crate::_expand_some_or_none!({$(|$ctx: &mut rlay_core::AppCtx| {$child; Ok(())})?} as Option<Box<fn(&mut rlay_core::AppCtx) -> Result<(), rlay_core::err::RlayError>>>)
             )?
         }

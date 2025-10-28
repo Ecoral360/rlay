@@ -83,6 +83,28 @@ impl From<Option<PartialContainerConfig>> for PartialContainerConfig {
     }
 }
 
+impl Config for PartialContainerConfig {
+    type PartialConfig = PartialContainerConfig;
+
+    fn merge<P: Into<Self::PartialConfig>>(&self, other: P) -> Self {
+        let other = other.into();
+        Self {
+            sizing: other.sizing.or(self.sizing),
+            background_color: other.background_color.or(self.background_color),
+            padding: other.padding.or(self.padding),
+            layout_direction: other.layout_direction.or(self.layout_direction),
+            child_gap: other.child_gap.or(self.child_gap),
+            align: other.align.or(self.align),
+            border: other.border.or(self.border),
+            corner_radius: other.corner_radius.or(self.corner_radius),
+            floating: other.floating.or(self.floating),
+            scroll: other.scroll.or(self.scroll),
+            pointer_capture: other.pointer_capture.or(self.pointer_capture),
+            focusable: other.focusable.or(self.focusable),
+        }
+    }
+}
+
 impl Config for ContainerConfig {
     type PartialConfig = PartialContainerConfig;
 
