@@ -1,7 +1,7 @@
-use std::{fmt::Display, str::FromStr};
+use std::{fmt::Display, marker::PhantomData, str::FromStr};
 
 use macroquad::color::RED;
-use rlay_components::{button::Button, comp, input_text::InputText};
+use rlay_components::{Component, button::Button, comp, def_comp, input_text::InputText};
 use rlay_core::{
     AppCtx, LayoutDirection, MouseButtonState, Padding,
     colors::{BLACK, DARKGRAY, LIGHTGRAY, WHITE},
@@ -73,42 +73,21 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
                 if show_completed.get() == false && completed {
                     continue;
                 }
+
                 let title = todo.title.clone();
-
-                comp!(ctx, view(child_gap = 10, align = { y = Center }) {
-                    comp!(ctx, Button(
-                        config = view_config!(
-                            sizing = { Fixed(20), Fixed(20) },
-                            background_color = if completed { DARKGRAY } else { WHITE }
-                        ),
-                        on_click = Box::new(|| {
-                                let mut new_todos = todos_arr.clone();
-                                new_todos[i] = Todo { title: title.to_string(), completed: !completed };
-                                todos.set(new_todos);
-                        })
-                    ));
-
-                    comp!(ctx, text(font_size = 24 as u16) { title });
-                    comp!(ctx, Button(
-                        config = view_config!(
-                            sizing = { Fixed(20), Fixed(20) },
-                            align = { x = Center, y = Center },
-                            background_color = WHITE,
-                            border = {
-                                color = BLACK,
-                            },
-                            corner_radius = corner_radius.all(100.0),
-                        ),
-                        config_on_hover = view_config!(background_color = RED),
-                        on_click = Box::new(||{
-                            let mut new_todos = todos_arr.clone();
-                            new_todos.remove(i);
-                            todos.set(new_todos);
-                        }),
-                    ) {
-                        comp!(ctx, text(font_size = 24 as u16) { "x" });
-                    });
-                });
+                comp!(ctx, TodoElement(
+                    todo = Some(todo),
+                    on_check = Box::new(|| {
+                        let mut new_todos = todos_arr.clone();
+                        new_todos[i] = Todo { title: title.to_string(), completed: !completed };
+                        todos.set(new_todos);
+                    }),
+                    on_delete = Box::new(|| {
+                        let mut new_todos = todos_arr.clone();
+                        new_todos.remove(i);
+                        todos.set(new_todos);
+                    })
+                ))
             }
         });
 
@@ -146,7 +125,58 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
     Ok(app_ctx)
 }
 
-#[derive(Clone, Debug, PartialEq)]
+def_comp! {
+    TDAttributes<'a> {
+        todo: Option<&'a Todo>,
+        on_check: Box<dyn Fn() + 'a>,
+        on_delete: Box<dyn Fn() + 'a>,
+    } impl default() {
+        Self {
+            _marker: PhantomData,
+            todo: None,
+            on_check: Box::new(|| {}),
+            on_delete: Box::new(|| {}),
+        }
+    }
+
+    TodoElement<'a>(ctx, attributes, _children) {
+        let Some(todo) = attributes.todo else {
+            return Err(RlayError::RuntimeError("missing value for todo".to_string()));
+        };
+        let completed = todo.completed;
+        let title = todo.title.clone();
+
+        comp!(ctx, view(child_gap = 10, align = { y = Center }) {
+            comp!(ctx, Button(
+                config = view_config!(
+                    sizing = { Fixed(20), Fixed(20) },
+                    background_color = if completed { DARKGRAY } else { WHITE }
+                ),
+                on_click = attributes.on_check
+            ));
+
+            comp!(ctx, text(font_size = 24 as u16) { title });
+            comp!(ctx, Button(
+                config = view_config!(
+                    sizing = { Fixed(20), Fixed(20) },
+                    align = { x = Center, y = Center },
+                    background_color = WHITE,
+                    border = {
+                        color = BLACK,
+                    },
+                    corner_radius = corner_radius.all(100.0),
+                ),
+                config_on_hover = view_config!(background_color = RED),
+                on_click = attributes.on_delete
+            ) {
+                comp!(ctx, text(font_size = 24 as u16) { "x" });
+            });
+        });
+
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Default)]
 struct Todo {
     completed: bool,
     title: String,
