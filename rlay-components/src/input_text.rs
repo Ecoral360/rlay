@@ -1,5 +1,3 @@
-use std::convert::Infallible;
-
 use rlay_core::{
     AppCtx, Padding,
     colors::{BLACK, LIGHTGRAY, WHITE},
@@ -8,34 +6,20 @@ use rlay_core::{
     rlay, useState,
 };
 
-use crate::Component;
+use crate::{Component, def_comp};
 
-#[derive(Default)]
-pub struct InputTextAttributes<'a> {
-    pub id: Option<&'a str>,
-    pub placeholder: &'a str,
-    pub input_state: Option<&'a mut StateValue<String>>,
-}
+def_comp! {
+    ITABuilder
+    pub struct InputTextAttributes<'a> {
+        #[builder(default)]
+        pub id: Option<&'a str>,
+        #[builder(default)]
+        pub placeholder: &'a str,
+        pub input_state: &'a mut StateValue<String>,
+    }
 
-pub struct InputText<'a> {
-    _marker: &'a Infallible,
-}
-
-impl<'a> Component for InputText<'a> {
-    type Attributes = InputTextAttributes<'a>;
-
-    fn render<F>(
-        ctx: &mut AppCtx,
-        attributes: Self::Attributes,
-        _children: Option<F>,
-    ) -> Result<(), RlayError>
-    where
-        F: FnOnce(&mut AppCtx) -> Result<(), RlayError>,
-    {
-        let input_state = match attributes.input_state {
-            Some(state) => state,
-            None => useState!(ctx, String::new()),
-        };
+    pub component InputText<'a>(ctx, attributes, _children) {
+        let input_state = attributes.input_state;
 
         let id = match attributes.id {
             Some(id) => id,
@@ -92,12 +76,10 @@ impl<'a> Component for InputText<'a> {
                 );
             } else {
                 rlay!(ctx, text(
-                    if input_text.is_empty() { placeholder } else { &input_text }, 
+                    if input_text.is_empty() { placeholder } else { &input_text },
                     font_size = 24 as u16
                 ));
             }
         });
-
-        Ok(())
     }
 }

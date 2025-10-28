@@ -15,6 +15,7 @@ rlay-components = { path = "./rlay-components" }
 macroquad = "0.4.14"
 derive_more = { version = "2.0.1", features = ["from"] }
 clap = { version = "4.5.50", features = ["derive"], optional = true }
+derive_builder = "0.20.2"
 
 [features]
 default = ["macroquad", "examples"]

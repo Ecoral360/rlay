@@ -12,64 +12,31 @@ pub trait Component {
         F: FnOnce(&mut AppCtx) -> Result<(), RlayError>;
 }
 
+pub type Callback<'a> = Box<dyn Fn() + 'a>;
 
 #[macro_export(local_inner_macros)]
 macro_rules! def_comp {
-    ($attr_name:ident<$lta:lifetime> { $( $field:ident : $type:ty ),* $(,)? }
-        $name:ident<$ltc:lifetime>($ctx:ident, $attributes:ident, $children:ident) $body:block
+    ($attr_builder_name:ident $attr:item
+        $vi:vis component $name:ident<$ltc:lifetime>($ctx:ident, $attributes:ident, $children:ident) $body:block
     ) => {
-        struct $name<$ltc> { _marker: std::marker::PhantomData<&$ltc std::convert::Infallible> }
+        $vi struct $name<$ltc> { _marker: std::marker::PhantomData<&$ltc std::convert::Infallible> }
 
-        #[derive(std::default::Default)]
-        struct $attr_name<$lta> {
-            _marker: std::marker::PhantomData<&$lta std::convert::Infallible>,
-            $($field: $type),*
-        }
+        #[derive(derive_builder::Builder)]
+        #[builder(pattern = "owned", name=$attr_builder_name)]
+        $attr
 
         impl<'a> Component for $name<$ltc> {
-            type Attributes = $attr_name<$ltc>;
+            type Attributes = $attr_builder_name<$ltc>;
 
             fn render<F>(
                 $ctx: &mut AppCtx,
-                $attributes: Self::Attributes,
+                attributes_builder: Self::Attributes,
                 $children: Option<F>,
             ) -> Result<(), RlayError>
             where
                 F: FnOnce(&mut AppCtx) -> Result<(), RlayError>,
             {
-                $body;
-                Ok(())
-            }
-        }
-    };
-
-    ($attr_name:ident<$lta:lifetime> { $($field:ident: $type:ty),* $(,)? } impl default() $default_body: block
-        $name:ident<$ltc:lifetime>($ctx:ident, $attributes:ident, $children:ident) $body:block
-    ) => {
-        struct $name<$ltc> { _marker: std::marker::PhantomData<&$ltc std::convert::Infallible> }
-
-        struct $attr_name<$lta> {
-            _marker: std::marker::PhantomData<&$lta std::convert::Infallible>,
-            $($field: $type),*
-        }
-
-        impl<$lta> std::default::Default for $attr_name<$lta> {
-            fn default() -> Self {
-                $default_body
-            }
-        }
-
-        impl<'a> Component for $name<$ltc> {
-            type Attributes = $attr_name<$ltc>;
-
-            fn render<F>(
-                $ctx: &mut AppCtx,
-                $attributes: Self::Attributes,
-                $children: Option<F>,
-            ) -> Result<(), RlayError>
-            where
-                F: FnOnce(&mut AppCtx) -> Result<(), RlayError>,
-            {
+                let $attributes = attributes_builder.build().unwrap();
                 $body;
                 Ok(())
             }

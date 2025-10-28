@@ -1,8 +1,12 @@
-use std::{fmt::Display, marker::PhantomData, str::FromStr};
+use std::{fmt::Display, str::FromStr};
 
-use rlay_components::{button::Button, comp, def_comp, input_text::InputText, Component};
+use rlay_components::{Callback, Component, button::Button, comp, def_comp, input_text::InputText};
 use rlay_core::{
-    colors::{BLACK, DARKGRAY, LIGHTGRAY, RED, WHITE}, corner_radius, err::RlayError, useEffect, useState, view_config, AppCtx, LayoutDirection, MouseButtonState, Padding
+    AppCtx, LayoutDirection, MouseButtonState, Padding,
+    colors::{BLACK, DARKGRAY, LIGHTGRAY, RED, WHITE},
+    corner_radius,
+    err::RlayError,
+    useEffect, useState, view_config,
 };
 
 pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
@@ -71,7 +75,7 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
 
                 let title = todo.title.clone();
                 comp!(ctx, TodoElement(
-                    todo = Some(todo),
+                    todo = todo,
                     on_check() {
                         let mut new_todos = todos_arr.clone();
                         new_todos[i] = Todo { title: title.to_string(), completed: !completed };
@@ -87,7 +91,7 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
         });
 
         comp!(ctx, view(sizing = { 50%, Fit }) {
-            comp!(ctx, InputText(input_state = Some(new_todo_input), placeholder = "new todo..."));
+            comp!(ctx, InputText(input_state = new_todo_input, placeholder = "new todo..."));
 
             comp!(ctx, Button(
                 config = view_config!(
@@ -120,25 +124,18 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
     Ok(app_ctx)
 }
 
-
 def_comp! {
-    TDAttributes<'a> {
-        todo: Option<&'a Todo>,
-        on_check: Box<dyn Fn() + 'a>,
-        on_delete: Box<dyn Fn() + 'a>,
-    } impl default() {
-        Self {
-            _marker: PhantomData,
-            todo: None,
-            on_check: Box::new(|| {}),
-            on_delete: Box::new(|| {}),
-        }
+    TDAttributesBuilder
+    struct TDAttributes<'a> {
+        todo: &'a Todo,
+        #[builder(default = "Box::new(||{})")]
+        on_check: Callback<'a>,
+        #[builder(default = "Box::new(||{})")]
+        on_delete: Callback<'a>,
     }
 
-    TodoElement<'a>(ctx, attributes, _children) {
-        let Some(todo) = attributes.todo else {
-            return Err(RlayError::RuntimeError("missing value for todo".to_string()));
-        };
+    component TodoElement<'a>(ctx, attributes, _children) {
+        let todo = attributes.todo;
         let completed = todo.completed;
         let title = todo.title.clone();
 

@@ -1,50 +1,36 @@
-use std::convert::Infallible;
-
 use rlay_core::{
-    AppCtx, Config, ContainerConfig, PartialContainerConfig, border_width,
+    AppCtx, Config, PartialContainerConfig, border_width,
     colors::{BLACK, WHITE},
     err::RlayError,
     padding, rlay, view_config,
 };
 
-use crate::Component;
+use crate::{def_comp, Component};
 
-pub struct ButtonAttributes<'a> {
-    pub id: Option<String>,
-    pub on_click: Box<dyn Fn() + 'a>,
-    pub on_hover: Box<dyn Fn() + 'a>,
-    pub config_on_hover: PartialContainerConfig,
-    pub config: PartialContainerConfig,
-    pub text: Option<String>,
-}
-impl<'a> Default for ButtonAttributes<'a> {
-    fn default() -> Self {
-        Self {
-            id: Default::default(),
-            on_click: Box::new(|| {}),
-            on_hover: Box::new(|| {}),
-            config_on_hover: Default::default(),
-            config: Default::default(),
-            text: Default::default(),
-        }
+def_comp! {
+    BtnAttrBuilder
+
+    pub struct ButtonAttributes<'a> {
+        #[builder(default)]
+        pub id: Option<String>,
+
+        #[builder(default = "Box::new(|| {})")]
+        pub on_click: Box<dyn Fn() + 'a>,
+
+        #[builder(default = "Box::new(|| {})")]
+        pub on_hover: Box<dyn Fn() + 'a>,
+
+        #[builder(default)]
+        pub config_on_hover: PartialContainerConfig,
+
+        #[builder(default)]
+        pub config: PartialContainerConfig,
+
+        #[builder(default)]
+        pub text: Option<String>,
     }
-}
-pub type ButtonConfig = ContainerConfig;
-pub struct Button<'a> {
-    _marker: &'a Infallible,
-}
 
-impl<'a> Component for Button<'a> {
-    type Attributes = ButtonAttributes<'a>;
-
-    fn render<F>(
-        ctx: &mut AppCtx,
-        attributes: Self::Attributes,
-        children: Option<F>,
-    ) -> Result<(), RlayError>
-    where
-        F: FnOnce(&mut AppCtx) -> Result<(), RlayError>,
-    {
+    pub component Button<'a>(ctx, attributes, children) {
         let id = attributes.id.unwrap_or_else(|| ctx.get_local_id());
 
         if ctx.is_clicked(&id) {
@@ -71,9 +57,63 @@ impl<'a> Component for Button<'a> {
                 cs(ctx)?;
             }
         });
-        Ok(())
     }
 }
+
+// impl<'a> Default for ButtonAttributes<'a> {
+//     fn default() -> Self {
+//         Self {
+//             id: Default::default(),
+//             on_click: Box::new(|| {}),
+//             on_hover: Box::new(|| {}),
+//             config_on_hover: Default::default(),
+//             config: Default::default(),
+//             text: Default::default(),
+//         }
+//     }
+// }
+// pub type ButtonConfig = ContainerConfig;
+
+// impl<'a> Component for Button<'a> {
+//     type Attributes = ButtonAttributes<'a>;
+//
+//     fn render<F>(
+//         ctx: &mut AppCtx,
+//         attributes: Self::Attributes,
+//         children: Option<F>,
+//     ) -> Result<(), RlayError>
+//     where
+//         F: FnOnce(&mut AppCtx) -> Result<(), RlayError>,
+//     {
+//         let id = attributes.id.unwrap_or_else(|| ctx.get_local_id());
+//
+//         if ctx.is_clicked(&id) {
+//             (attributes.on_click)();
+//         }
+//
+//         let mut c = view_config!(
+//             background_color = WHITE,
+//             border = { color = BLACK, width = border_width.all(1.0) },
+//             padding = padding.all(0)
+//         )
+//         .merge(attributes.config);
+//
+//         if ctx.is_hovered(&id) {
+//             (attributes.on_hover)();
+//             c = c.merge(attributes.config_on_hover);
+//         }
+//
+//         rlay!(ctx, view[id = id](c.into()) {
+//             if let Some(text) = attributes.text {
+//                 rlay!(ctx, text(text));
+//             }
+//             if let Some(cs) = children {
+//                 cs(ctx)?;
+//             }
+//         });
+//         Ok(())
+//     }
+// }
 
 // def_comp!(Button:
 // attrs: {}
