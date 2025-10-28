@@ -138,6 +138,9 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
             let todos_arr = todos.get();
             for (i, todo) in todos_arr.iter().enumerate() {
                 let completed = todo.completed;
+                if show_completed.get() == false && completed {
+                    continue;
+                }
                 let title = todo.title.clone();
                 let todo_id = format!("todo-{}", i);
                 let delete_todo_id = format!("delete-todo-{}", i);
