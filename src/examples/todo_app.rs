@@ -142,20 +142,6 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
                     continue;
                 }
                 let title = todo.title.clone();
-                let todo_id = format!("todo-{}", i);
-                let delete_todo_id = format!("delete-todo-{}", i);
-
-                if ctx.state().is_clicked(&todo_id) {
-                    let mut new_todos = todos_arr.clone();
-                    new_todos[i] = Todo { title: title.to_string(), completed: !completed };
-                    todos.set(new_todos);
-                }
-
-                if ctx.state().is_clicked(&delete_todo_id) {
-                    let mut new_todos = todos_arr.clone();
-                    new_todos.remove(i);
-                    todos.set(new_todos);
-                }
 
                 rlay!(ctx, view(child_gap = 10, align = { y = Center }) {
                     comp!(ctx, Button(
@@ -170,7 +156,7 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
                     ]);
 
                     rlay!(ctx, text(title, font_size = 24 as u16));
-                    rlay!(ctx, view[id=delete_todo_id](
+                    comp!(ctx, Button(
                         sizing = { Fixed(20), Fixed(20) },
                         align = { x = Center, y = Center },
                         background_color = WHITE,
@@ -178,35 +164,31 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
                             color = BLACK,
                         },
                         corner_radius = corner_radius.all(100.0),
-                    ){
+                    )[
+                        on_click = Box::new(||{
+                            let mut new_todos = todos_arr.clone();
+                            new_todos.remove(i);
+                            todos.set(new_todos);
+                        })
+                    ] {
                         rlay!(ctx, text("x", font_size = 24 as u16));
                     });
                 });
             }
         });
 
-        let input_text = new_todo.get();
-
-        let new_todo_is_focused = ctx.is_focused("new-todo-input");
-        if new_todo_is_focused {
-            if let Some(chr) = ctx.get_input_state().keyboard.last_char_pressed {
-                new_todo.set(format!("{}{}", input_text, chr));
-            }
-        }
-
         rlay!(ctx, view(sizing = { 50%, Fit }) {
             text_input(ctx, new_todo)?;
 
-            rlay!(ctx, view[id="add-todo"](
+            comp!(ctx, Button(
                 padding = Padding::default().x(20).y(6),
                 background_color = WHITE,
                 border = {
                     color = BLACK,
                     width = 1.0,
                 }
-            ) {
-                rlay!(ctx, text("+ Todo", font_size = 24 as u16));
-                if ctx.state().is_clicked("add-todo") {
+            )[
+                on_click = Box::new(|| {
                     let input_text = new_todo.get();
                     let input_text = input_text.trim();
                     if !input_text.is_empty() {
@@ -218,8 +200,10 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
 
                         new_todo.set(String::new());
                     }
-                }
-            })
+                })
+            ] {
+                rlay!(ctx, text("+ Todo", font_size = 24 as u16));
+            });
         })
     });
 
