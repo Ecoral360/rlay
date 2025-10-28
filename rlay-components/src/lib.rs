@@ -27,12 +27,12 @@ macro_rules! _expand_some_or_none {
 
 #[macro_export]
 macro_rules! comp {
-    ($ctx:ident, $comp:ident$([$($attrs:tt)*])?($($config:tt)*) $($child:block)?) => {{
+    ($ctx:ident, $comp:ident($($config:tt)*)$([$($attrs:tt)*])? $($child:block)?) => {{
         #[allow(clippy::needless_update)]
         {
             let config = {
                 let mut config = <$comp as $crate::Component>::Config::default();
-                $crate::_comp_field!(config; $($config)*);
+                rlay_core::_rlay!(config; $($config)*);
                 config
             };
 

@@ -1,7 +1,7 @@
 use std::convert::Infallible;
 
 use rlay_core::{
-    AppCtx, Config, PartialContainerConfig, border_width,
+    AppCtx, Config, ContainerConfig, border_width,
     colors::{BLACK, WHITE},
     err::RlayError,
     padding, rlay, view_config,
@@ -15,7 +15,7 @@ pub struct ButtonAttributes<'a> {
     pub on_click: Option<Box<dyn Fn() + 'a>>,
     pub text: Option<String>,
 }
-pub type ButtonConfig = PartialContainerConfig;
+pub type ButtonConfig = ContainerConfig;
 pub struct Button<'a> {
     _marker: &'a Infallible,
 }

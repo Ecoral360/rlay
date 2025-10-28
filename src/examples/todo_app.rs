@@ -122,9 +122,9 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
     ) {
         rlay!(ctx, text("Todo app", font_size = 45 as u16));
 
-        comp!(ctx, Button[
+        comp!(ctx, Button(padding = Padding::default().all(10))[
             on_click = Box::new(|| { show_completed.set(!show_completed.get()); }),
-        ](padding = Padding::default().all(10)) {
+        ] {
             rlay!(ctx, text(if show_completed.get() { "Hide completed" } else { "Show completed" }));
         });
 
@@ -158,13 +158,17 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
                 }
 
                 rlay!(ctx, view(child_gap = 10, align = { y = Center }) {
-                    rlay!(ctx, view[id=todo_id](
+                    comp!(ctx, Button(
                         sizing = { Fixed(20), Fixed(20) },
-                        background_color = if completed { DARKGRAY } else { WHITE },
-                        border = {
-                            color = BLACK
-                        }
-                    ));
+                        background_color = if completed { DARKGRAY } else { WHITE }
+                    )[
+                        on_click = Box::new(|| {
+                                let mut new_todos = todos_arr.clone();
+                                new_todos[i] = Todo { title: title.to_string(), completed: !completed };
+                                todos.set(new_todos);
+                        })
+                    ]);
+
                     rlay!(ctx, text(title, font_size = 24 as u16));
                     rlay!(ctx, view[id=delete_todo_id](
                         sizing = { Fixed(20), Fixed(20) },
