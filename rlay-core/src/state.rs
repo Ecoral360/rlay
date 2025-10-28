@@ -5,8 +5,6 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use derive_more::From;
-
 use crate::{AppCtx, Done, Element, ElementLayout, Point2D};
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -305,59 +303,6 @@ pub struct InputState {
     pub keyboard: KeyboardInput,
 }
 
-#[derive(Debug, Clone, PartialEq, From)]
-pub enum Value {
-    String(String),
-    Bool(bool),
-    Int(i32),
-    Float(f32),
-    Array(Vec<Value>),
-    Object(HashMap<String, Value>),
-}
-
-impl Value {
-    pub fn str<S: ToString>(s: S) -> Self {
-        Self::String(s.to_string())
-    }
-
-    pub fn obj<E: Into<Vec<(K, V)>>, K: ToString, V: Into<Value>>(entries: E) -> Self {
-        Self::Object(HashMap::from_iter(
-            entries
-                .into()
-                .into_iter()
-                .map(|(k, v)| (k.to_string(), v.into())),
-        ))
-    }
-
-    pub fn unwrap_arr(&self) -> &Vec<Value> {
-        match self {
-            Self::Array(v) => v,
-            _ => panic!("not an array"),
-        }
-    }
-
-    pub fn unwrap_obj(&self) -> &HashMap<String, Value> {
-        match self {
-            Self::Object(o) => o,
-            _ => panic!("not an object"),
-        }
-    }
-
-    pub fn unwrap_string(&self) -> &String {
-        match self {
-            Self::String(s) => s,
-            _ => panic!("not a string"),
-        }
-    }
-
-    pub fn unwrap_bool(&self) -> bool {
-        match self {
-            Self::Bool(b) => *b,
-            _ => panic!("not a boolean"),
-        }
-    }
-}
-
 pub struct StateValue<T: Clone> {
     key: String,
     store: Arc<Mutex<HashMap<String, Box<dyn Any>>>>,
@@ -370,9 +315,10 @@ impl<T: Clone + 'static> StateValue<T> {
         F: Fn() -> T,
     {
         let store = ctx.store();
-        let mut store = store.lock().unwrap();
-        if store.get(&key).is_none() {
-            store.insert(key.clone(), Box::new((default_val)()));
+        let key_exists = { store.lock().unwrap().get(&key).is_some() };
+        if !key_exists {
+            let default_val = Box::new((default_val)());
+            store.lock().unwrap().insert(key.clone(), default_val);
         }
         Self {
             key,
@@ -402,26 +348,26 @@ impl<T: Clone + 'static> StateValue<T> {
 
 #[macro_export]
 macro_rules! useState {
-    // ($ctx:ident, { $($key:literal : $val:expr),* $(,)? }) => {{
-    //     let mut map = ::std::collections::HashMap::new();
-    //     {$(
-    //         map.insert($key.to_string(), $val.into());
-    //     )*}
-    //     let key = format!("{}:{}", file!(), line!());
-    //     &mut $crate::UseState::new(key, &$ctx, move || map)
-    // }};
-    //
-    // ($ctx:ident, [$($val:expr),* $(,)?]) => {{
-    //     let mut v = Vec::new();
-    //     {$(
-    //         v.push($val.into());
-    //     )*}
-    //     let key = format!("{}:{}", file!(), line!());
-    //     &mut $crate::UseState::new(key, &$ctx, move || v)
-    // }};
     ($ctx:ident, $default_val:expr) => {{
         let key = format!("{}:{}", file!(), line!());
         &mut $crate::StateValue::new(key, &$ctx, || $default_val)
+    }};
+}
+
+#[macro_export]
+macro_rules! useEffect {
+    ($ctx:ident, $effect:block, [$($dep:ident),* $(,)?]) => {{
+        let mut apply_effect = false;
+        $({
+            let val = $crate::useState!($ctx, $dep.get());
+            if val.get() != $dep.get() {
+                apply_effect = true;
+                val.set($dep.get());
+            }
+        })*
+        if apply_effect {
+            $effect
+        }
     }};
 }
 
@@ -435,25 +381,3 @@ macro_rules! map {
         map
     }};
 }
-
-// #[macro_export]
-// macro_rules! value {
-//     ({ $($key:literal : $val:expr),* $(,)? }) => {{
-//         let mut map = ::std::collections::HashMap::new();
-//         {$(
-//             map.insert($key.to_string(), $val.into());
-//         )*}
-//         $crate::Value::Object(map)
-//     }};
-//     ([$($val:expr),* $(,)?]) => {{
-//         let mut v = Vec::new();
-//         {$(
-//             v.push($val.into());
-//         )*}
-//         $crate::Value::Array(v)
-//     }};
-//
-//     ($val:expr) => {{
-//         $crate::Value::from($val)
-//     }};
-// }

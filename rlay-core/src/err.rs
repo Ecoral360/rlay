@@ -22,6 +22,9 @@ pub enum RlayError {
     #[error("Cannot find element in memory")]
     ElementNotFound,
 
+    #[error("{0}")]
+    RuntimeError(String),
+
     #[error(transparent)]
     MemError(MemError),
 }

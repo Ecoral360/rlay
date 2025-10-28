@@ -2,7 +2,7 @@ use std::{any::Any, collections::HashMap, sync::{Arc, Mutex}};
 
 use crate::{
     AppState, Dimension2D, Done, Element, ElementLayout, ElementState, Initial, InputState, MinMax,
-    Point2D, Sizing, SizingAxis, TextConfig, TextDimensions, Value, err::RlayError,
+    Point2D, Sizing, SizingAxis, TextConfig, TextDimensions, err::RlayError,
     mem::ArenaElement,
 };
 

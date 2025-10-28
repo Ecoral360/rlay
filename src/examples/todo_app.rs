@@ -1,19 +1,87 @@
+use std::{fmt::Display, str::FromStr};
+
 use rlay_core::{
-    colors::{BLACK, DARKGRAY, LIGHTGRAY, WHITE}, corner_radius, err::RlayError, rlay, useState, AppCtx, LayoutDirection, MouseButtonState, Padding, StateValue
+    AppCtx, LayoutDirection, MouseButtonState, Padding, StateValue,
+    colors::{BLACK, DARKGRAY, LIGHTGRAY, WHITE},
+    corner_radius,
+    err::RlayError,
+    rlay, useEffect, useState,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 struct Todo {
     completed: bool,
     title: String,
 }
 
+impl Display for Todo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "[{}] {:?}",
+            if self.completed { "x" } else { " " },
+            self.title
+        )
+    }
+}
+impl FromStr for Todo {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // Example input: [x] "Buy milk"
+        let s = s.trim();
+
+        // Must match "\[.\]"
+        if !(s.starts_with('[') && s.chars().nth(2).is_some_and(|c| c == ']')) {
+            return Err("Invalid format: missing [ or ]".into());
+        }
+
+        // Extract completed marker
+        let completed = match s.chars().nth(1) {
+            Some('x') | Some('X') => true,
+            Some(' ') => false,
+            _ => return Err("Invalid completion marker, expected 'x' or ' '".into()),
+        };
+
+        let after_bracket = &s[4..].trim();
+
+        let title = if after_bracket.starts_with('"') && after_bracket.ends_with('"') {
+            after_bracket[1..after_bracket.len() - 1].to_string()
+        } else {
+            return Err("Title not properly quoted".into());
+        };
+
+        Ok(Todo { title, completed })
+    }
+}
+
+fn save_todos(path: &str, todos: Vec<Todo>) -> std::io::Result<()> {
+    std::fs::write(
+        path,
+        todos
+            .iter()
+            .map(|todo| todo.to_string())
+            .collect::<Vec<_>>()
+            .join("\n"),
+    )
+}
+
+fn load_todos(path: &str) -> Result<Vec<Todo>, String> {
+    let content = std::fs::read_to_string(path).map_err(|err| err.to_string())?;
+    let str_todos = content.split("\n");
+
+    str_todos
+        .map(|st| st.parse())
+        .collect::<Result<Vec<_>, String>>()
+}
+
 pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
+    let todo_path = "./todos";
     let ctx = &mut app_ctx;
 
     let todos = useState!(
         ctx,
-        vec![
+        load_todos(todo_path).unwrap_or_else(|_| vec![
             Todo {
                 completed: false,
                 title: "devoir".to_string()
@@ -22,7 +90,17 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
                 completed: false,
                 title: "test".to_string()
             }
-        ]
+        ])
+    );
+
+
+    useEffect!(
+        ctx,
+        {
+            save_todos(todo_path, todos.get())
+                .map_err(|err| RlayError::RuntimeError(err.to_string()))?;
+        },
+        [todos]
     );
 
     let new_todo = useState!(ctx, String::new());
@@ -83,7 +161,7 @@ pub fn todo_app_example(mut app_ctx: AppCtx) -> Result<AppCtx, RlayError> {
                             color = BLACK,
                         },
                         corner_radius = corner_radius.all(100.0),
-                    ){ 
+                    ){
                         rlay!(ctx, text("x", font_size = 24 as u16));
                     });
                 });
@@ -137,6 +215,9 @@ fn text_input(ctx: &mut AppCtx, input_state: &mut StateValue<String>) -> Result<
     let id = ctx.get_local_id();
     let is_focused = ctx.is_focused(&id);
     let input_text = input_state.get();
+    let timer = useState!(ctx, 0);
+
+    timer.set((timer.get() + 1) % 100);
 
     if is_focused {
         if let Some(chr) = ctx.get_input_state().keyboard.last_char_pressed {
@@ -170,7 +251,13 @@ fn text_input(ctx: &mut AppCtx, input_state: &mut StateValue<String>) -> Result<
             ctx.set_focused(Some(id));
         }
         if is_focused {
-            rlay!(ctx, text(format!("{}|", input_text), font_size = 24 as u16));
+            rlay!(
+                ctx,
+                text(
+                    format!("{}{}", input_text, if timer.get() > 60 { "" } else { "|" }),
+                    font_size = 24 as u16
+                )
+            );
         } else {
             rlay!(ctx, text(input_text, font_size = 24 as u16));
         }
