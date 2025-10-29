@@ -63,16 +63,3 @@ Est labore quis in. Ut quo corporis libero quo ex quis. Expedita totam in velit 
     // ctx.get_root().ok_or(RlayError::NoRoot)
     Ok(app_ctx)
 }
-
-fn create_element(ctx: &mut AppCtx) -> Result<&mut AppCtx, RlayError> {
-    Ok(ctx)
-}
-
-#[cfg(feature = "raylib")]
-fn main() -> Result<(), RlayError> {
-    use rlay_core::{Renderer, raylib_renderer::RaylibRenderer};
-
-    let renderer = RlayRender::from(RaylibRenderer::new());
-
-    renderer.render(|ctx| create_element(ctx))
-}

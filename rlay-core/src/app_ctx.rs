@@ -1,9 +1,7 @@
 use std::{any::Any, collections::HashMap, sync::{Arc, Mutex}};
 
 use crate::{
-    AppState, Dimension2D, Done, Element, ElementLayout, ElementState, Initial, InputState, MinMax,
-    Point2D, Sizing, SizingAxis, TextConfig, TextDimensions, err::RlayError,
-    mem::ArenaElement,
+    err::RlayError, mem::ArenaElement, AppState, Dimension2D, Done, Element, ElementLayout, ElementState, Initial, InputState, MinMax, Point2D, RlayKeyboardKey, Sizing, SizingAxis, TextConfig, TextDimensions
 };
 
 pub struct AppCtx {
@@ -14,7 +12,8 @@ pub struct AppCtx {
 }
 
 pub struct AppCtxUtils {
-    pub measure_text: fn(&str, &TextConfig) -> TextDimensions,
+    pub measure_text: Box<dyn Fn(&str, &TextConfig) -> TextDimensions>,
+    pub is_key_pressed: Box<dyn Fn(RlayKeyboardKey) -> bool>,
 }
 
 impl AppCtx {

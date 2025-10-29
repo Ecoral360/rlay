@@ -6,7 +6,12 @@ mod examples;
 #[cfg(feature = "examples")]
 mod cli {
     use clap::Parser;
-    use rlay_core::{Render, err::RlayError, macroquad_renderer::MacroquadRenderer};
+    #[cfg(feature = "macroquad")]
+    use rlay_core::macroquad_renderer::MacroquadRenderer;
+    #[cfg(feature = "raylib")]
+    use rlay_core::raylib_renderer::RaylibRenderer;
+
+    use rlay_core::{Render, err::RlayError};
 
     use crate::examples::{Example, grows::grows_example, todo_app::todo_app_example};
 
@@ -16,13 +21,28 @@ mod cli {
         example: Option<Example>,
     }
 
+    #[cfg(feature = "macroquad")]
     pub async fn run_cli() -> Result<(), RlayError> {
         let args = Cli::parse();
 
         if let Some(example) = args.example {
             match example {
-                Example::Grows => MacroquadRenderer::render(grows_example).await?,
-                Example::Todo => MacroquadRenderer::render(todo_app_example).await?,
+                Example::Grows => MacroquadRenderer::render_async(grows_example).await?,
+                Example::Todo => MacroquadRenderer::render_async(todo_app_example).await?,
+            };
+        }
+
+        Ok(())
+    }
+
+    #[cfg(feature = "raylib")]
+    pub fn run_cli() -> Result<(), RlayError> {
+        let args = Cli::parse();
+
+        if let Some(example) = args.example {
+            match example {
+                Example::Grows => RaylibRenderer::render(grows_example)?,
+                Example::Todo => RaylibRenderer::render(todo_app_example)?,
             };
         }
 
@@ -34,5 +54,11 @@ mod cli {
 #[macroquad::main("")]
 async fn main() -> Result<(), RlayError> {
     cli::run_cli().await?;
+    Ok(())
+}
+
+#[cfg(feature = "raylib")]
+fn main() -> Result<(), RlayError> {
+    cli::run_cli()?;
     Ok(())
 }

@@ -1,34 +1,24 @@
 use crate::{
     AppCtx, Color, Dimension2D, Done, Element, ElementLayout, ImageData, InputState, Point2D,
-    TextConfig, calculate_layout, err::RlayError,
+    TextConfig, calculate_layout, err::RlayError, render::commands::RlayDrawCommand,
 };
 
-mod commands;
+pub mod commands;
 
 pub trait Render {
     fn setup(&mut self, ctx: &mut AppCtx);
 
     fn next_input_state(&mut self, ctx: &mut AppCtx) -> InputState;
 
-    fn draw_root(&mut self, ctx: &AppCtx, root: ElementLayout<Done>);
-
-    fn draw_rectangle(&mut self, position: Point2D, dimensions: Dimension2D, color: Color);
-
-    fn draw_circle(&mut self, position: Point2D, radius: f32, color: Color);
-
-    fn draw_text(
+    fn process_element(
         &mut self,
-        text: &str,
-        position: Point2D,
-        dimensions: Dimension2D,
-        config: &TextConfig,
-    );
-
-    fn draw_image(&mut self, data: &ImageData, position: Point2D, dimensions: Dimension2D) {}
-
-    fn draw_element(&mut self, ctx: &AppCtx, element: &ElementLayout<Done>) {
+        ctx: &AppCtx,
+        element: &ElementLayout<Done>,
+    ) -> Vec<RlayDrawCommand> {
         let el_pos = element.position();
         let el_dim = element.dimensions();
+
+        let mut commands = vec![];
 
         match element.data() {
             Element::Container(container) => {
@@ -47,24 +37,28 @@ pub trait Render {
                         // We do this first, so they are drawn over by the rectangles
 
                         // top left
-                        self.draw_circle(el_pos + Point2D::scalar(top_left), top_left, bg_color);
+                        commands.push(draw_circle_cmd(
+                            el_pos + Point2D::scalar(top_left),
+                            top_left,
+                            bg_color,
+                        ));
 
                         // top right
-                        self.draw_circle(
+                        commands.push(draw_circle_cmd(
                             el_pos + Point2D::new(el_dim.width - top_right, top_right),
                             top_right,
                             bg_color,
-                        );
+                        ));
 
                         // bottom left
-                        self.draw_circle(
+                        commands.push(draw_circle_cmd(
                             el_pos + Point2D::new(bottom_left, el_dim.height - bottom_left),
                             bottom_left,
                             bg_color,
-                        );
+                        ));
 
                         // bottom right
-                        self.draw_circle(
+                        commands.push(draw_circle_cmd(
                             el_pos
                                 + Point2D::new(
                                     el_dim.width - bottom_right,
@@ -72,22 +66,22 @@ pub trait Render {
                                 ),
                             bottom_right,
                             bg_color,
-                        );
+                        ));
 
                         // ------- END draw the corners -------
 
                         // draw the left rectangle
-                        self.draw_rectangle(
+                        commands.push(draw_rectangle_cmd(
                             el_pos + Point2D::new(0.0, top_left),
                             Dimension2D::new(
                                 top_left.max(bottom_left),
                                 el_dim.height - top_left - bottom_left,
                             ),
                             bg_color,
-                        );
+                        ));
 
                         // draw the right rectangle
-                        self.draw_rectangle(
+                        commands.push(draw_rectangle_cmd(
                             el_pos
                                 + Point2D::new(
                                     el_dim.width - top_right.max(bottom_right),
@@ -98,20 +92,20 @@ pub trait Render {
                                 el_dim.height - top_right - bottom_right,
                             ),
                             bg_color,
-                        );
+                        ));
 
                         // draw the top rectangle
-                        self.draw_rectangle(
+                        commands.push(draw_rectangle_cmd(
                             el_pos + Point2D::new(top_left, 0.0),
                             Dimension2D::new(
                                 el_dim.width - top_left - top_right,
                                 top_left.max(top_right),
                             ),
                             bg_color,
-                        );
+                        ));
 
                         // draw the bottom rectangle
-                        self.draw_rectangle(
+                        commands.push(draw_rectangle_cmd(
                             el_pos
                                 + Point2D::new(
                                     bottom_left,
@@ -122,10 +116,10 @@ pub trait Render {
                                 bottom_left.max(bottom_right),
                             ),
                             bg_color,
-                        );
+                        ));
 
                         // draw the center rectangle
-                        self.draw_rectangle(
+                        commands.push(draw_rectangle_cmd(
                             el_pos
                                 + Point2D::new(top_left.max(bottom_left), top_left.max(top_right)),
                             el_dim
@@ -134,69 +128,71 @@ pub trait Render {
                                     top_left.max(top_right) + bottom_left.max(bottom_right),
                                 ),
                             bg_color,
-                        );
+                        ));
                     }
                 } else if let Some(border) = container.config.border {
                     let (border_pos, border_dim) = border.width.to_border_layout();
 
                     match border.mode {
                         crate::BorderMode::Outset => {
-                            self.draw_rectangle(
+                            commands.push(draw_rectangle_cmd(
                                 el_pos - border_pos,
                                 el_dim + border_dim,
                                 border.color,
-                            );
+                            ));
                             if let Some(bg_color) = bg_color {
-                                self.draw_rectangle(el_pos, el_dim, bg_color);
+                                commands.push(draw_rectangle_cmd(el_pos, el_dim, bg_color));
                             }
                         }
                         crate::BorderMode::Inset => {
-                            self.draw_rectangle(el_pos, el_dim, border.color);
+                            commands.push(draw_rectangle_cmd(el_pos, el_dim, border.color));
                             if let Some(bg_color) = bg_color {
-                                self.draw_rectangle(
+                                commands.push(draw_rectangle_cmd(
                                     el_pos + border_pos,
                                     el_dim - border_dim,
                                     bg_color,
-                                );
+                                ));
                             }
                         }
                         crate::BorderMode::Midset => {
-                            self.draw_rectangle(
+                            commands.push(draw_rectangle_cmd(
                                 el_pos - border_pos / Point2D::scalar(2.0),
                                 el_dim + border_dim / Dimension2D::scalar(2.0),
                                 border.color,
-                            );
+                            ));
                             if let Some(bg_color) = bg_color {
-                                self.draw_rectangle(
+                                commands.push(draw_rectangle_cmd(
                                     el_pos + border_pos / Point2D::scalar(2.0),
                                     el_dim - border_dim / Dimension2D::scalar(2.0),
                                     bg_color,
-                                );
+                                ));
                             }
                         }
                     }
                 } else {
                     if let Some(bg_color) = bg_color {
-                        self.draw_rectangle(el_pos, el_dim, bg_color);
+                        commands.push(draw_rectangle_cmd(el_pos, el_dim, bg_color));
                     }
                 }
 
                 for child in element.children() {
-                    self.draw_element(ctx, child);
+                    commands.extend(self.process_element(ctx, child));
                 }
             }
             Element::Text(text) => {
-                self.draw_text(text.data(), el_pos, el_dim, text.config());
+                commands.push(draw_text_cmd(text.data(), el_pos, el_dim, text.config()));
             }
             Element::Image(image) => todo!(),
         }
+
+        commands
     }
 
-    fn render_frame<'a>(
+    fn process_frame<'a>(
         &mut self,
         mut ctx: AppCtx,
         root_factory: impl RootFactory,
-    ) -> Result<AppCtx, RlayError> {
+    ) -> Result<(AppCtx, Vec<RlayDrawCommand>), RlayError> {
         ctx.clear();
 
         self.setup(&mut ctx);
@@ -213,14 +209,24 @@ pub trait Render {
 
         ctx.update_hovered_elements(&layout);
 
-        self.draw_root(&ctx, layout);
+        let draws = self.process_element(&ctx, &layout);
 
-        Ok(ctx)
+        Ok((ctx, draws))
     }
 
-    async fn render<R>(root_factory: R) -> Result<(), RlayError>
+    async fn render_async<R>(root_factory: R) -> Result<(), RlayError>
     where
-        R: RootFactory;
+        R: RootFactory,
+    {
+        Ok(())
+    }
+
+    fn render<R>(root_factory: R) -> Result<(), RlayError>
+    where
+        R: RootFactory,
+    {
+        Ok(())
+    }
 }
 
 pub trait RootFactory: Clone {
@@ -233,5 +239,35 @@ where
 {
     fn apply(&self, ctx: AppCtx) -> Result<AppCtx, RlayError> {
         (self)(ctx)
+    }
+}
+
+fn draw_circle_cmd(position: Point2D, radius: f32, color: Color) -> RlayDrawCommand {
+    RlayDrawCommand::DrawCircle {
+        position,
+        radius,
+        color,
+    }
+}
+
+fn draw_rectangle_cmd(position: Point2D, dimensions: Dimension2D, color: Color) -> RlayDrawCommand {
+    RlayDrawCommand::DrawRectangle {
+        position,
+        dimensions,
+        color,
+    }
+}
+
+fn draw_text_cmd(
+    text: &str,
+    position: Point2D,
+    dimensions: Dimension2D,
+    config: &TextConfig,
+) -> RlayDrawCommand {
+    RlayDrawCommand::DrawText {
+        text: text.to_string(),
+        position,
+        dimensions,
+        config: config.clone(),
     }
 }

@@ -1,5 +1,5 @@
 use rlay_core::{
-    AppCtx, Padding,
+    AppCtx, Padding, RlayKeyboardKey,
     colors::{BLACK, LIGHTGRAY, WHITE},
     err::RlayError,
     reactive::StateValue,
@@ -35,6 +35,11 @@ def_comp! {
         timer.set((timer.get() + 1) % 100);
 
         if is_focused {
+            if (ctx.utils.is_key_pressed)(RlayKeyboardKey::KEY_BACKSPACE) {
+                if !input_text.is_empty() {
+                    input_state.set(format!("{}", &input_text[..input_text.len() - 1]));
+                }
+            }
             if let Some(chr) = ctx.get_input_state().keyboard.last_char_pressed {
                 match chr {
                     '\n' | '\r' => {
