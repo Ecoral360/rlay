@@ -18,7 +18,7 @@ clap = { version = "4.5.50", features = ["derive"], optional = true }
 derive_builder = "0.20.2"
 
 [features]
-default = ["raylib", "examples"]
+default = ["macroquad", "examples"]
 raylib = ["rlay-core/raylib"]
 macroquad = ["rlay-core/macroquad"]
 examples = ["dep:clap"]
