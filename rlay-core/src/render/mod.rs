@@ -1,20 +1,19 @@
 use crate::{
-    AppCtx, Color, Dimension2D, Done, Element, ElementLayout, ImageData, InputState, Point2D,
-    TextConfig, calculate_layout, err::RlayError, render::commands::RlayDrawCommand,
+    AppCtx, Color, Dimension2D, InputState, Point2D, TextConfig, err::RlayError,
+    render::commands::RlayDrawCommand,
 };
 
 pub mod commands;
 
-pub trait Render {
-    fn setup(&mut self, ctx: &mut AppCtx);
+pub mod renderer {
+    use crate::{
+        AppCtx, Dimension2D, Done, Element, ElementLayout, Point2D, RenderImpl, RootFactory,
+        calculate_layout,
+        err::RlayError,
+        render::{commands::RlayDrawCommand, draw_circle_cmd, draw_rectangle_cmd, draw_text_cmd},
+    };
 
-    fn next_input_state(&mut self, ctx: &mut AppCtx) -> InputState;
-
-    fn process_element(
-        &mut self,
-        ctx: &AppCtx,
-        element: &ElementLayout<Done>,
-    ) -> Vec<RlayDrawCommand> {
+    fn process_element(ctx: &AppCtx, element: &ElementLayout<Done>) -> Vec<RlayDrawCommand> {
         let el_pos = element.position();
         let el_dim = element.dimensions();
 
@@ -176,7 +175,7 @@ pub trait Render {
                 }
 
                 for child in element.children() {
-                    commands.extend(self.process_element(ctx, child));
+                    commands.extend(process_element(ctx, child));
                 }
             }
             Element::Text(text) => {
@@ -188,16 +187,19 @@ pub trait Render {
         commands
     }
 
-    fn process_frame<'a>(
-        &mut self,
+    pub fn process_frame<'a, T>(
+        render_impl: &mut T,
         mut ctx: AppCtx,
         root_factory: impl RootFactory,
-    ) -> Result<(AppCtx, Vec<RlayDrawCommand>), RlayError> {
+    ) -> Result<(AppCtx, Vec<RlayDrawCommand>), RlayError>
+    where
+        T: RenderImpl,
+    {
         ctx.clear();
 
-        self.setup(&mut ctx);
+        render_impl.setup(&mut ctx);
 
-        let input_state = self.next_input_state(&mut ctx);
+        let input_state = render_impl.next_input_state(&mut ctx);
         ctx.set_input_state(input_state);
 
         let mut ctx = root_factory.apply(ctx)?;
@@ -209,10 +211,16 @@ pub trait Render {
 
         ctx.update_hovered_elements(&layout);
 
-        let draws = self.process_element(&ctx, &layout);
+        let draws = process_element(&ctx, &layout);
 
         Ok((ctx, draws))
     }
+}
+
+pub trait RenderImpl {
+    fn setup(&mut self, ctx: &mut AppCtx);
+
+    fn next_input_state(&mut self, ctx: &mut AppCtx) -> InputState;
 
     async fn render_async<R>(root_factory: R) -> Result<(), RlayError>
     where

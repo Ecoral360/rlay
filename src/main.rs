@@ -11,7 +11,7 @@ mod cli {
     #[cfg(feature = "raylib")]
     use rlay_core::raylib_renderer::RaylibRenderer;
 
-    use rlay_core::{Render, err::RlayError};
+    use rlay_core::{RenderImpl, err::RlayError};
 
     use crate::examples::{Example, grows::grows_example, todo_app::todo_app_example};
 

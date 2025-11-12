@@ -1,7 +1,7 @@
 use macroquad::window::next_frame;
 use rlay_components::rlay_comp;
 use rlay_core::{
-    AppCtx, Render,
+    AppCtx, RenderImpl,
     colors::{BLUE, ORANGE},
     err::RlayError,
     rlay, sizing,

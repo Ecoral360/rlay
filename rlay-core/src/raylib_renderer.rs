@@ -8,7 +8,7 @@ use crate::{
     commands::RlayDrawCommand,
     err::RlayError,
     layout::{Dimension2D, Point2D},
-    render::Render,
+    render::{RenderImpl, renderer},
     sizing,
 };
 
@@ -38,7 +38,7 @@ pub struct RaylibRenderer {
 
 impl RaylibRenderer {
     pub fn new() -> Self {
-        let (handle, thread) = raylib::init().vsync().build();
+        let (handle, thread) = raylib::init().vsync().resizable().build();
         Self {
             handle,
             thread,
@@ -47,16 +47,16 @@ impl RaylibRenderer {
     }
 }
 
-impl Render for RaylibRenderer {
+impl RenderImpl for RaylibRenderer {
     fn render<R>(root_factory: R) -> Result<(), RlayError>
     where
         R: RootFactory,
     {
-        let mut renderer = RaylibRenderer::new();
-        let font = renderer
+        let mut renderer_impl = RaylibRenderer::new();
+        let font = renderer_impl
             .handle
             .load_font(
-                &renderer.thread,
+                &renderer_impl.thread,
                 "src/examples/assets/Roboto-VariableFont.ttf",
             )
             .expect("loaded font");
@@ -80,16 +80,16 @@ impl Render for RaylibRenderer {
         // renderer.handle.set_target_fps(200);
         let mut ctx = AppCtx::new(fns);
 
-        renderer.default_font = Some(font);
+        renderer_impl.default_font = Some(font);
 
-        while !renderer.handle.window_should_close() {
-            let (new_ctx, draws) = renderer
-                .process_frame(ctx, root_factory.clone())
-                .expect("error when rendering frame");
+        while !renderer_impl.handle.window_should_close() {
+            let (new_ctx, draws) =
+                renderer::process_frame(&mut renderer_impl, ctx, root_factory.clone())
+                    .expect("error when rendering frame");
 
             {
-                let font = renderer.default_font.as_ref().unwrap();
-                let mut d = renderer.handle.begin_drawing(&renderer.thread);
+                let font = renderer_impl.default_font.as_ref().unwrap();
+                let mut d = renderer_impl.handle.begin_drawing(&renderer_impl.thread);
                 d.clear_background(Color::from(BLACK));
                 for draw in draws {
                     match draw {
@@ -123,7 +123,7 @@ impl Render for RaylibRenderer {
                         } => {
                             let Point2D { x, y } = position;
 
-                            d.draw_text_ex(
+                            d.draw_text_codepoints(
                                 font,
                                 &text,
                                 Vector2::new(x, y),

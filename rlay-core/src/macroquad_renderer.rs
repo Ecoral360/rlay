@@ -1,9 +1,9 @@
 use macroquad::{
     color::{BLACK, Color},
     input::{
-        self, KeyCode, get_char_pressed, get_keys_down, get_keys_pressed, get_keys_released,
-        get_last_key_pressed, is_key_down, is_key_pressed, is_mouse_button_down,
-        is_mouse_button_pressed, is_mouse_button_released, mouse_delta_position, mouse_position,
+        self, KeyCode, get_char_pressed, get_keys_pressed, get_last_key_pressed, is_key_down,
+        is_key_pressed, is_mouse_button_down, is_mouse_button_pressed, is_mouse_button_released,
+        mouse_delta_position, mouse_position,
     },
     shapes::{draw_circle, draw_rectangle},
     text::{TextParams, draw_multiline_text_ex, measure_text},
@@ -11,13 +11,13 @@ use macroquad::{
 };
 
 use crate::{
-    AppCtx, AppCtxUtils, Color as RlayColor, ContainerConfig, ContainerElement, Done, Element,
-    ElementLayout, InputState, KeyboardInput, MouseButtonState, MouseInput, RlayKeyboardKey,
-    RootFactory, TextConfig, TextDimensions, TextElement,
+    AppCtx, AppCtxUtils, Color as RlayColor, ContainerConfig, ContainerElement, Element,
+    InputState, KeyboardInput, MouseButtonState, MouseInput, RlayKeyboardKey, RootFactory,
+    TextConfig, TextDimensions,
     commands::RlayDrawCommand,
     err::RlayError,
     layout::{Dimension2D, Point2D},
-    render::Render,
+    render::{RenderImpl, renderer},
     sizing,
 };
 
@@ -155,7 +155,7 @@ pub struct MacroquadRenderer {
     current_angle: f32,
 }
 
-impl Render for MacroquadRenderer {
+impl RenderImpl for MacroquadRenderer {
     async fn render_async<R>(root_factory: R) -> Result<(), RlayError>
     where
         R: RootFactory,
@@ -174,10 +174,10 @@ impl Render for MacroquadRenderer {
 
         let mut ctx = AppCtx::new(fns);
         loop {
-            let mut renderer = MacroquadRenderer::default();
-            let (new_ctx, draws) = renderer
-                .process_frame(ctx, root_factory.clone())
-                .expect("error when rendering frame");
+            let mut renderer_impl = MacroquadRenderer::default();
+            let (new_ctx, draws) =
+                renderer::process_frame(&mut renderer_impl, ctx, root_factory.clone())
+                    .expect("error when rendering frame");
 
             ctx = new_ctx;
 
